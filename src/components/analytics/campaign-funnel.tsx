@@ -11,7 +11,7 @@ type FunnelData = {
   cashbackIssuedCount: number
 }
 
-const STAGES: { key: keyof FunnelData; label: string; tier: DataTier }[] = [
+const STAGES: { key: keyof FunnelData; label: string; tier: Exclude<DataTier, "live"> }[] = [
   { key: "offerShown", label: "Offer Shown", tier: "future" },
   { key: "offerViewed", label: "Offer Viewed", tier: "future" },
   { key: "offerClicked", label: "Offer Clicked", tier: "future" },

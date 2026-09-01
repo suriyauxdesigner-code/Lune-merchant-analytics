@@ -95,6 +95,26 @@ export function durationLabel(c: Campaign) {
   return "—"
 }
 
+export type PacingStatus = "spending_fast" | "on_track" | "underutilized"
+
+export const PACING_LABEL: Record<PacingStatus, string> = {
+  spending_fast: "Spending Fast",
+  on_track: "On Track",
+  underutilized: "Underutilized",
+}
+
+/**
+ * Classifies budget pace from utilization-to-date and the forecast exhaustion date. A rough
+ * heuristic, not a statistical model: very low spend with no exhaustion in sight reads as
+ * underutilized; budget projected to run out within three weeks reads as spending fast.
+ */
+export function getPacingStatus(utilizationPct: number, estimatedExhaustionDate: string | null): PacingStatus {
+  const daysToExhaustion = estimatedExhaustionDate ? Math.round((new Date(estimatedExhaustionDate).getTime() - NOW.getTime()) / 86_400_000) : null
+  if (daysToExhaustion !== null && daysToExhaustion <= 21) return "spending_fast"
+  if (utilizationPct < 20 && (daysToExhaustion === null || daysToExhaustion > 90)) return "underutilized"
+  return "on_track"
+}
+
 export function monthKey(iso: string) {
   const d = new Date(iso)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`

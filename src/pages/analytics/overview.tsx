@@ -7,6 +7,11 @@ import { FilterBar } from "@/components/analytics/filter-bar"
 import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
 import { MetricToggle } from "@/components/analytics/metric-toggle"
 import { BusinessImpactFlow } from "@/components/analytics/business-impact-flow"
+import { CampaignImpact } from "@/components/analytics/campaign-impact"
+import { SpendEfficiencyPanel } from "@/components/analytics/spend-efficiency-panel"
+import { BudgetPacingPanel } from "@/components/analytics/budget-pacing-panel"
+import { TopCampaigns } from "@/components/analytics/top-campaigns"
+import { KeyInsights } from "@/components/analytics/key-insights"
 import { EngagementFunnel } from "@/components/analytics/engagement-funnel"
 import { CustomerImpactStats } from "@/components/analytics/customer-impact-stats"
 import { ChannelComparisonCards } from "@/components/analytics/channel-comparison-cards"
@@ -17,6 +22,7 @@ import { CAMPAIGNS } from "@/lib/data"
 import { formatAed, formatNumber, formatPercent, formatRatio } from "@/lib/utils"
 import { applyCampaignFilters, applyCampaignFiltersExceptDate, resolveDateRange, dateRangeLabel, DEFAULT_FILTERS } from "@/lib/analytics-utils"
 import { aggregatePerformance, bucketSeries, sumSeriesInRange, previousPeriod, percentChange, generateTransactionRows } from "@/lib/mock-performance"
+import { generateInsights } from "@/lib/insights"
 
 export default function AnalyticsOverview() {
   const [filters, setFilters] = React.useState(DEFAULT_FILTERS)
@@ -38,11 +44,28 @@ export default function AnalyticsOverview() {
   const previous = React.useMemo(() => sumSeriesInRange(mergedDaily, prevRange), [mergedDaily, prevRange])
   const chartSeries = React.useMemo(() => bucketSeries(mergedDaily, range), [mergedDaily, range])
 
-  // Cohort totals: campaign-level detail (budget, breakdowns, funnel, qualification, transaction log).
+  // Cohort totals: campaign-level detail (budget, breakdowns, funnel, qualification, transaction log,
+  // and the pacing/baseline modeling below, which only exist per-campaign, not on the daily series).
   const cohortPerf = React.useMemo(() => aggregatePerformance(filteredCampaigns), [filteredCampaigns])
   const totalBudget = filteredCampaigns.reduce((sum, c) => sum + c.budget, 0)
   const transactionRows = React.useMemo(() => generateTransactionRows(filteredCampaigns), [filteredCampaigns])
   const periodLabel = dateRangeLabel(filters.dateRange)
+
+  const gmvDeltaPct = percentChange(current.transactionValue, previous.transactionValue)
+  const insights = React.useMemo(
+    () =>
+      generateInsights({
+        gmvDeltaPct,
+        utilizationPct: cohortPerf.utilizationPct,
+        estimatedExhaustionDate: cohortPerf.estimatedExhaustionDate,
+        roi: current.roi,
+        qualification: cohortPerf.qualification,
+      }),
+    [gmvDeltaPct, cohortPerf, current.roi]
+  )
+
+  const campaignTableRef = React.useRef<HTMLDivElement>(null)
+  const scrollToCampaignTable = () => campaignTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
 
   return (
     <div>
@@ -62,7 +85,7 @@ export default function AnalyticsOverview() {
               icon={<TrendingUp className="size-4" />}
               label="GMV"
               value={formatAed(current.transactionValue)}
-              deltaPct={percentChange(current.transactionValue, previous.transactionValue)}
+              deltaPct={gmvDeltaPct}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
@@ -101,28 +124,56 @@ export default function AnalyticsOverview() {
             Transaction and cashback figures are prototype estimates — they require transaction/settlement data. Change is versus the equivalent prior period.
           </p>
 
-          {/* 2. Business Impact — what business impact did cashback create? */}
+          {/* 2. Key Insights — where should I take action? */}
           <section className="mt-12">
+            <KeyInsights insights={insights} />
+          </section>
+
+          {/* 3. Business Impact — what business impact did cashback create? */}
+          <section className="mt-12 space-y-6">
             <SectionCard title="Business Impact" description="How cashback investment turned into business generated">
               <BusinessImpactFlow cashbackIssued={current.cashbackIssued} transactions={current.transactions} transactionValue={current.transactionValue} roi={current.roi} />
             </SectionCard>
+            <SectionCard title="Campaign Impact" description="GMV against a modeled baseline of what would have happened without cashback">
+              <CampaignImpact
+                transactionValue={cohortPerf.transactionValue}
+                estimatedBaselineValue={cohortPerf.estimatedBaselineValue}
+                estimatedIncrementalValue={cohortPerf.estimatedIncrementalValue}
+                estimatedUpliftPct={cohortPerf.estimatedUpliftPct}
+              />
+            </SectionCard>
           </section>
 
-          {/* 3. Performance Over Time — how is performance changing? */}
+          {/* 4. Performance Over Time — how is performance changing? */}
           <section className="mt-12">
             <SectionCard title="Performance Over Time" description="Is performance improving or declining?" contentClassName="pt-2" actions={<MetricToggle value={chartMetric} onChange={setChartMetric} />}>
               <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
             </SectionCard>
           </section>
 
-          {/* 4. Campaign Performance — which campaigns are driving results? */}
-          <section className="mt-12">
-            <SectionCard title="Campaign Performance" description="Sorted by GMV. Click a campaign to open its analytics." contentClassName="px-5 pb-5">
-              <CampaignTable campaigns={filteredCampaigns} />
+          {/* 5. Budget & Efficiency — is my cashback spend efficient, and how is it pacing? */}
+          <section className="mt-12 grid gap-6 lg:grid-cols-2">
+            <SectionCard title="Spend Efficiency" description="Cost and return on cashback invested">
+              <SpendEfficiencyPanel cashbackIssued={current.cashbackIssued} transactionValue={current.transactionValue} transactions={current.transactions} roi={current.roi} />
+            </SectionCard>
+            <SectionCard title="Budget Pacing" description="Burn rate and forecast exhaustion">
+              <BudgetPacingPanel
+                remainingBudget={cohortPerf.remainingBudget}
+                utilizationPct={cohortPerf.utilizationPct}
+                burnRatePerDay={cohortPerf.burnRatePerDay}
+                estimatedExhaustionDate={cohortPerf.estimatedExhaustionDate}
+              />
             </SectionCard>
           </section>
 
-          {/* 5. Customer Impact — how are customers responding? */}
+          {/* 6. Campaigns — which campaigns are driving results? */}
+          <section className="mt-12">
+            <SectionCard title="Top Campaigns" description="Best performers by GMV and ROI">
+              <TopCampaigns campaigns={filteredCampaigns} onViewAll={scrollToCampaignTable} />
+            </SectionCard>
+          </section>
+
+          {/* 7. Customer/Channel Insights — how are customers responding, and where am I performing best? */}
           <section className="mt-12 grid gap-6 lg:grid-cols-2">
             <SectionCard title="Engagement Funnel" description="From offer shown to cashback rewarded">
               <EngagementFunnel perf={cohortPerf} />
@@ -132,21 +183,25 @@ export default function AnalyticsOverview() {
             </SectionCard>
           </section>
 
-          {/* 6. Channel Performance — where am I performing best? */}
           <section className="mt-12">
             <SectionCard title="Channel Performance" description="GMV, cashback and ROI by channel">
               <ChannelComparisonCards campaigns={filteredCampaigns} />
             </SectionCard>
           </section>
 
-          {/* 7. Opportunities — where am I losing potential transactions? */}
+          {/* 8. Detailed data — the full breakdown behind the numbers above */}
+          <section className="mt-12" ref={campaignTableRef}>
+            <SectionCard title="Campaign Performance" description="Every campaign, sorted by GMV. Click one to open its analytics." contentClassName="px-5 pb-5">
+              <CampaignTable campaigns={filteredCampaigns} />
+            </SectionCard>
+          </section>
+
           <section className="mt-12">
             <SectionCard title="Why Transactions Didn't Qualify" description="Attempted transactions that didn't receive cashback, and why">
               <QualificationBreakdown buckets={cohortPerf.qualification} />
             </SectionCard>
           </section>
 
-          {/* 8. Transaction Detail — what actually happened? */}
           <section className="mt-12">
             <SectionCard title="Transaction Log" description="Individual transactions behind the numbers above" contentClassName="px-5 pb-5">
               <TransactionLogTable rows={transactionRows} />

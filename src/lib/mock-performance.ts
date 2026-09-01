@@ -72,11 +72,24 @@ export type CampaignPerformance = {
   utilizationPct: number
   cashbackIssued: number
   remainingBudget: number
+  /** Cashback issued per active day since activation — the basis for the Budget Pacing forecast. */
+  burnRatePerDay: number
+  /** Projected date the remaining budget runs out at the current burn rate. Null when the campaign isn't actively spending (completed, or no burn yet). */
+  estimatedExhaustionDate: string | null
   avgTransactionValue: number
   avgCashbackPerTransaction: number
   transactions: number
   transactionValue: number
   roi: number
+  /**
+   * Modeled assumption of what GMV would have been without the cashback incentive — NOT a
+   * measured figure. A real incremental-impact number requires transaction attribution and a
+   * control/baseline group, which Pulse doesn't have; every consumer of these three fields must
+   * label them "Estimated".
+   */
+  estimatedUpliftPct: number
+  estimatedBaselineValue: number
+  estimatedIncrementalValue: number
   offerShown: number
   offerViewed: number
   offerClicked: number
@@ -107,11 +120,16 @@ const ZERO_PERF: Omit<CampaignPerformance, "hasStarted"> = {
   utilizationPct: 0,
   cashbackIssued: 0,
   remainingBudget: 0,
+  burnRatePerDay: 0,
+  estimatedExhaustionDate: null,
   avgTransactionValue: 0,
   avgCashbackPerTransaction: 0,
   transactions: 0,
   transactionValue: 0,
   roi: 0,
+  estimatedUpliftPct: 0,
+  estimatedBaselineValue: 0,
+  estimatedIncrementalValue: 0,
   offerShown: 0,
   offerViewed: 0,
   offerClicked: 0,
@@ -167,6 +185,19 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
   const transactionValue = transactions * avgTransactionValue
   const roi = cashbackIssued > 0 ? transactionValue / cashbackIssued : 0
 
+  // Burn rate + exhaustion forecast — only meaningful while a campaign is still actively spending.
+  const activeDays = Math.max(1, daysBetween(activatedAt, windowEnd))
+  const burnRatePerDay = campaign.status === "active" ? cashbackIssued / activeDays : 0
+  const estimatedExhaustionDate =
+    campaign.status === "active" && burnRatePerDay > 0 && remainingBudget > 0
+      ? new Date(NOW.getTime() + (remainingBudget / burnRatePerDay) * 86_400_000).toISOString().slice(0, 10)
+      : null
+
+  // Modeled baseline/uplift — a deterministic estimate, not a measured attribution result.
+  const estimatedUpliftPct = seeded(id, 40, 8, 24)
+  const estimatedBaselineValue = transactionValue / (1 + estimatedUpliftPct / 100)
+  const estimatedIncrementalValue = transactionValue - estimatedBaselineValue
+
   // Funnel — built upward from `transactions` so every widget agrees on the same count.
   const clickToTransactionRate = seeded(id, 4, 0.18, 0.35)
   const viewToClickRate = seeded(id, 5, 0.3, 0.48)
@@ -209,11 +240,16 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
     utilizationPct,
     cashbackIssued,
     remainingBudget,
+    burnRatePerDay,
+    estimatedExhaustionDate,
     avgTransactionValue,
     avgCashbackPerTransaction,
     transactions,
     transactionValue,
     roi,
+    estimatedUpliftPct,
+    estimatedBaselineValue,
+    estimatedIncrementalValue,
     offerShown,
     offerViewed,
     offerClicked,
@@ -336,17 +372,32 @@ export function aggregatePerformance(campaigns: Campaign[]): AggregatePerformanc
     count: perfs.reduce((s, x) => s + (x.p.qualification.find((q) => q.reason === z.reason)?.count ?? 0), 0),
   }))
 
+  // Burn rate sums across every campaign still actively spending; the exhaustion forecast uses the
+  // combined remaining budget against that combined pace.
+  const burnRatePerDay = sum(perfs, (p) => p.burnRatePerDay)
+  const estimatedExhaustionDate =
+    burnRatePerDay > 0 && remainingBudget > 0 ? new Date(NOW.getTime() + (remainingBudget / burnRatePerDay) * 86_400_000).toISOString().slice(0, 10) : null
+
+  const estimatedBaselineValue = sum(perfs, (p) => p.estimatedBaselineValue)
+  const estimatedIncrementalValue = transactionValue - estimatedBaselineValue
+  const estimatedUpliftPct = estimatedBaselineValue > 0 ? (estimatedIncrementalValue / estimatedBaselineValue) * 100 : 0
+
   return {
     campaignsStarted: perfs.length,
     budget,
     utilizationPct: budget > 0 ? (cashbackIssued / budget) * 100 : 0,
     cashbackIssued,
     remainingBudget,
+    burnRatePerDay,
+    estimatedExhaustionDate,
     avgTransactionValue: transactions > 0 ? Math.round(transactionValue / transactions) : 0,
     avgCashbackPerTransaction: transactions > 0 ? cashbackIssued / transactions : 0,
     transactions,
     transactionValue,
     roi: cashbackIssued > 0 ? transactionValue / cashbackIssued : 0,
+    estimatedUpliftPct,
+    estimatedBaselineValue,
+    estimatedIncrementalValue,
     offerShown,
     offerViewed,
     offerClicked,

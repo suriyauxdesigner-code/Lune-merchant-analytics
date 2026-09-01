@@ -49,7 +49,7 @@ export function KpiCard({
   showTierBadge?: boolean
 }) {
   return (
-    <div className={cn("w-full max-w-[300px] justify-self-start rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
+    <div className={cn("w-full rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-semibold text-foreground">{label}</p>
         {icon && <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">{icon}</div>}
@@ -79,18 +79,50 @@ export function DeltaBadge({ pct }: { pct: number }) {
 const SM_COLS_CLASS: Record<number, string> = { 1: "sm:grid-cols-1", 2: "sm:grid-cols-2", 3: "sm:grid-cols-3" }
 const LG_COLS_CLASS: Record<number, string> = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4" }
 
+/** Splits `count` items across as few rows as possible (max 4 per row), balancing rows rather than front-loading them — 6 becomes 3+3, 7 becomes 4+3, not 4+2+1. */
+function balancedRowSizes(count: number): number[] {
+  const numRows = Math.max(1, Math.ceil(count / 4))
+  const sizes: number[] = []
+  let remaining = count
+  for (let r = 0; r < numRows; r++) {
+    const rowsLeft = numRows - r
+    const size = Math.ceil(remaining / rowsLeft)
+    sizes.push(size)
+    remaining -= size
+  }
+  return sizes
+}
+
 /**
- * A responsive grid of individual KpiCards — never more than 4 per row. When
- * wrapping is needed, rows are balanced rather than front-loaded (6 cards
- * become 3+3, not 4+2; 7 become 4+3, not 4+2+1).
+ * A responsive grid of individual KpiCards — never more than 4 per row. When wrapping is
+ * needed, each row is its own grid sized to exactly its own card count, so cards always fill
+ * their row edge-to-edge instead of leaving a dead trailing cell (e.g. a 4+3 split renders as
+ * two full-width rows, not a 4-column grid with one empty slot in the second row).
  */
 export function KpiGrid({ children, className }: { children: ReactNode; className?: string }) {
-  const count = Children.count(children)
-  const rows = Math.max(1, Math.ceil(count / 4))
-  const cols = Math.min(4, Math.max(1, Math.ceil(count / rows)))
-  const smCols = Math.min(3, cols)
+  const items = Children.toArray(children)
+  const rowSizes = balancedRowSizes(items.length)
 
-  return <div className={cn("grid grid-cols-2 gap-4", SM_COLS_CLASS[smCols], LG_COLS_CLASS[cols], className)}>{children}</div>
+  const rows: ReactNode[][] = []
+  let cursor = 0
+  for (const size of rowSizes) {
+    rows.push(items.slice(cursor, cursor + size))
+    cursor += size
+  }
+
+  return (
+    <div className={cn("space-y-4", className)}>
+      {rows.map((rowItems, i) => {
+        const cols = rowItems.length
+        const smCols = Math.min(3, cols)
+        return (
+          <div key={i} className={cn("grid grid-cols-2 gap-4", SM_COLS_CLASS[smCols], LG_COLS_CLASS[cols])}>
+            {rowItems}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export function TierBadge({ tier, label, className }: { tier: Exclude<DataTier, "live">; label?: string; className?: string }) {

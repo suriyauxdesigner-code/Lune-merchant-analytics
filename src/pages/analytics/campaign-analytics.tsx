@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useParams, Link } from "react-router-dom"
-import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Clock, CalendarDays, TrendingUp, Receipt, Coins, Target, Gauge, BarChart3 } from "lucide-react"
+import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Clock, CalendarDays, TrendingUp, Receipt, Coins, Target, Gauge, BarChart3, Megaphone as MegaphoneIcon } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard, KpiGrid } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
@@ -10,18 +10,30 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { DetailGrid } from "@/components/analytics/detail-grid"
 import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
 import { MetricToggle } from "@/components/analytics/metric-toggle"
-import { BusinessImpactFlow } from "@/components/analytics/business-impact-flow"
+import { BudgetPacingPanel } from "@/components/analytics/budget-pacing-panel"
 import { EngagementFunnel } from "@/components/analytics/engagement-funnel"
-import { CustomerImpactStats } from "@/components/analytics/customer-impact-stats"
-import { ChannelSplitTable } from "@/components/analytics/channel-split-table"
 import { QualificationBreakdown } from "@/components/analytics/qualification-breakdown"
-import { TransactionLogTable } from "@/components/analytics/transaction-log-table"
+import { OfferEconomicsPanel } from "@/components/analytics/offer-economics-panel"
+import { ChannelSplitTable } from "@/components/analytics/channel-split-table"
+import { PurchaseBehaviourPanel } from "@/components/analytics/purchase-behaviour-panel"
+import { DayOfWeekPanel } from "@/components/analytics/day-of-week-panel"
+import { KeyInsights } from "@/components/analytics/key-insights"
+import { TransactionSection } from "@/components/analytics/transaction-section"
 import { campaignById, brandById } from "@/lib/data"
 import { formatAed, formatDate, formatNumber, formatPercent, formatRatio } from "@/lib/utils"
 import { durationLabel } from "@/lib/analytics-utils"
-import { getCampaignPerformance, bucketSeries, generateTransactionRows } from "@/lib/mock-performance"
-import { Megaphone } from "lucide-react"
+import { getCampaignPerformance, bucketSeries, bucketByDayOfWeek, generateTransactionRows } from "@/lib/mock-performance"
+import { computeAmountStats, computeAmountDistribution, computeOfferEconomics } from "@/lib/transaction-stats"
+import { generateCampaignInsights } from "@/lib/insights"
 
+const CAMPAIGN_CHART_METRICS: ChartMetric[] = ["gmv", "transactions", "cashback", "roi", "aov"]
+
+/**
+ * Campaign Analytics — "Is this campaign working, why, and what should I change?" One level
+ * below Brand: everything here is scoped to a single campaign. Deliberately does not repeat
+ * brand-wide campaign tables or portfolio comparisons — this page is about optimizing one
+ * campaign's configuration and spend.
+ */
 export default function CampaignAnalytics() {
   const { campaignId = "" } = useParams()
   const campaign = campaignById(campaignId)
@@ -36,15 +48,40 @@ export default function CampaignAnalytics() {
     return bucketSeries(perf.dailySeries, { from, to })
   }, [perf])
   const transactionRows = React.useMemo(() => (campaign ? generateTransactionRows([campaign]) : []), [campaign])
+  const weekday = React.useMemo(() => (perf ? bucketByDayOfWeek(perf.dailySeries) : []), [perf])
+  const amountStats = React.useMemo(() => computeAmountStats(transactionRows), [transactionRows])
+  const amountDistribution = React.useMemo(() => computeAmountDistribution(transactionRows), [transactionRows])
+  const offerEconomics = React.useMemo(() => (campaign ? computeOfferEconomics(transactionRows, campaign) : null), [transactionRows, campaign])
+
+  const channelMix = React.useMemo(() => {
+    if (!perf?.channelSplit?.online || !perf.channelSplit.in_store) return null
+    const total = perf.channelSplit.online.transactionValue + perf.channelSplit.in_store.transactionValue
+    if (total === 0) return null
+    return { onlinePct: (perf.channelSplit.online.transactionValue / total) * 100, inStorePct: (perf.channelSplit.in_store.transactionValue / total) * 100 }
+  }, [perf])
+
+  const insights = React.useMemo(() => {
+    if (!perf) return []
+    return generateCampaignInsights({
+      transactionValue: perf.transactionValue,
+      cashbackIssued: perf.cashbackIssued,
+      channelMix,
+      qualification: perf.qualification,
+      utilizationPct: perf.utilizationPct,
+      estimatedExhaustionDate: perf.estimatedExhaustionDate,
+      weekday,
+    })
+  }, [perf, channelMix, weekday])
 
   if (!campaign || !brand || !perf) {
-    return <EmptyState icon={<Megaphone className="size-6" />} title="Campaign not found" description="This campaign doesn't exist in the sample dataset." />
+    return <EmptyState icon={<MegaphoneIcon className="size-6" />} title="Campaign not found" description="This campaign doesn't exist in the sample dataset." />
   }
 
   return (
     <div>
+      {/* 1. Campaign Header */}
       <PageHeader
-        breadcrumb={[{ label: "Analytics", to: "/analytics" }, { label: brand.name, to: `/analytics/brands/${brand.id}` }, { label: campaign.name }]}
+        breadcrumb={[{ label: "Merchant Analytics", to: "/analytics" }, { label: brand.name, to: `/analytics/brands/${brand.id}` }, { label: campaign.name }]}
         title={
           <>
             {campaign.name}
@@ -84,7 +121,7 @@ export default function CampaignAnalytics() {
         />
       </SectionCard>
 
-      {/* Campaign Performance — did this campaign work? */}
+      {/* 2. Campaign Health */}
       <KpiGrid>
         <KpiCard icon={<TrendingUp className="size-4" />} label="GMV" value={formatAed(perf.transactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
         <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
@@ -96,36 +133,54 @@ export default function CampaignAnalytics() {
       </KpiGrid>
       <p className="mt-2 text-xs text-muted-foreground">Transaction and cashback figures are prototype estimates — they require transaction/settlement data.</p>
 
-      {/* Business Impact */}
+      {/* 3. Budget Pacing — how quickly is this campaign consuming its budget? */}
       <section className="mt-12">
-        <SectionCard title="Business Impact" description="How cashback investment turned into business generated">
-          <BusinessImpactFlow cashbackIssued={perf.cashbackIssued} transactions={perf.transactions} transactionValue={perf.transactionValue} roi={perf.roi} />
+        <SectionCard title="Budget Pacing" description="Burn rate and forecast exhaustion for this campaign">
+          <BudgetPacingPanel
+            remainingBudget={perf.remainingBudget}
+            utilizationPct={perf.utilizationPct}
+            burnRatePerDay={perf.burnRatePerDay}
+            estimatedExhaustionDate={perf.estimatedExhaustionDate}
+          />
         </SectionCard>
       </section>
 
-      {/* Performance Over Time */}
+      {/* 4. Campaign Performance Over Time */}
       <section className="mt-12">
         <SectionCard
-          title="Performance Over Time"
+          title="Campaign Performance Over Time"
           description="Campaign performance across its active duration"
           contentClassName="pt-2"
-          actions={<MetricToggle value={chartMetric} onChange={setChartMetric} />}
+          actions={<MetricToggle value={chartMetric} onChange={setChartMetric} metrics={CAMPAIGN_CHART_METRICS} />}
         >
           <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
         </SectionCard>
       </section>
 
-      {/* Customer Response */}
-      <section className="mt-12 grid gap-6 lg:grid-cols-2">
-        <SectionCard title="Engagement Funnel" description="From offer shown to cashback rewarded">
+      {/* 5. Campaign Conversion Funnel */}
+      <section className="mt-12">
+        <SectionCard title="Campaign Conversion Funnel" description="From offer shown to cashback rewarded">
           <EngagementFunnel perf={perf} />
-        </SectionCard>
-        <SectionCard title="Customer Impact" description="Reach, acquisition and repeat behavior">
-          <CustomerImpactStats perf={perf} />
         </SectionCard>
       </section>
 
-      {/* Channel Performance */}
+      {/* 6. Campaign Eligibility / Failed Transactions */}
+      <section className="mt-12">
+        <SectionCard title="Campaign Eligibility" description="Attempted transactions that didn't receive cashback, and why">
+          <QualificationBreakdown buckets={perf.qualification} qualified={perf.transactions} />
+        </SectionCard>
+      </section>
+
+      {/* 7. Offer Economics — is the offer configuration itself working? */}
+      {offerEconomics && (
+        <section className="mt-12">
+          <SectionCard title="Offer Economics" description="How the offer configuration is playing out in real behavior">
+            <OfferEconomicsPanel campaign={campaign} economics={offerEconomics} />
+          </SectionCard>
+        </section>
+      )}
+
+      {/* 8. Channel Performance — only for campaigns targeting both channels */}
       {campaign.channel === "both" && perf.channelSplit?.online && perf.channelSplit?.in_store && (
         <section className="mt-12">
           <SectionCard title="Channel Performance" description="Online vs. in-store performance for this campaign">
@@ -134,17 +189,33 @@ export default function CampaignAnalytics() {
         </section>
       )}
 
-      {/* Qualification */}
+      {/* 9. Purchase Behaviour */}
       <section className="mt-12">
-        <SectionCard title="Why Transactions Didn't Qualify" description="Attempted transactions that didn't receive cashback, and why">
-          <QualificationBreakdown buckets={perf.qualification} />
+        <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction">
+          <PurchaseBehaviourPanel stats={amountStats} distribution={amountDistribution} />
         </SectionCard>
       </section>
 
-      {/* Transaction Log */}
+      {/* 10. Time / Day Performance */}
       <section className="mt-12">
-        <SectionCard title="Transaction Log" description="Individual transactions behind the numbers above" contentClassName="px-5 pb-5">
-          <TransactionLogTable rows={transactionRows} showCampaign={false} />
+        <SectionCard title="Time / Day Performance" description="GMV by day of week">
+          <DayOfWeekPanel weekday={weekday} />
+        </SectionCard>
+      </section>
+
+      {/* 11. Campaign Insights */}
+      {insights.length > 0 && (
+        <section className="mt-12">
+          <SectionCard title="Campaign Insights" description="Data-driven takeaways for this campaign">
+            <KeyInsights insights={insights} />
+          </SectionCard>
+        </section>
+      )}
+
+      {/* 12. Transactions */}
+      <section className="mt-12">
+        <SectionCard title="Transactions" description="Individual transactions behind the numbers above" contentClassName="px-5 pb-5">
+          <TransactionSection rows={transactionRows} showCampaign={false} />
         </SectionCard>
       </section>
     </div>

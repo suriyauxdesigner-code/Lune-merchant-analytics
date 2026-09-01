@@ -1,5 +1,6 @@
 import type { Campaign, Channel } from "./types"
 import { NOW, type DateRange } from "./analytics-utils"
+import { terminalsForBrand } from "./data"
 
 // ---------------------------------------------------------------------------
 // Prototype performance data.
@@ -81,15 +82,6 @@ export type CampaignPerformance = {
   transactions: number
   transactionValue: number
   roi: number
-  /**
-   * Modeled assumption of what GMV would have been without the cashback incentive — NOT a
-   * measured figure. A real incremental-impact number requires transaction attribution and a
-   * control/baseline group, which Pulse doesn't have; every consumer of these three fields must
-   * label them "Estimated".
-   */
-  estimatedUpliftPct: number
-  estimatedBaselineValue: number
-  estimatedIncrementalValue: number
   offerShown: number
   offerViewed: number
   offerClicked: number
@@ -127,9 +119,6 @@ const ZERO_PERF: Omit<CampaignPerformance, "hasStarted"> = {
   transactions: 0,
   transactionValue: 0,
   roi: 0,
-  estimatedUpliftPct: 0,
-  estimatedBaselineValue: 0,
-  estimatedIncrementalValue: 0,
   offerShown: 0,
   offerViewed: 0,
   offerClicked: 0,
@@ -193,11 +182,6 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
       ? new Date(NOW.getTime() + (remainingBudget / burnRatePerDay) * 86_400_000).toISOString().slice(0, 10)
       : null
 
-  // Modeled baseline/uplift — a deterministic estimate, not a measured attribution result.
-  const estimatedUpliftPct = seeded(id, 40, 8, 24)
-  const estimatedBaselineValue = transactionValue / (1 + estimatedUpliftPct / 100)
-  const estimatedIncrementalValue = transactionValue - estimatedBaselineValue
-
   // Funnel — built upward from `transactions` so every widget agrees on the same count.
   const clickToTransactionRate = seeded(id, 4, 0.18, 0.35)
   const viewToClickRate = seeded(id, 5, 0.3, 0.48)
@@ -247,9 +231,6 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
     transactions,
     transactionValue,
     roi,
-    estimatedUpliftPct,
-    estimatedBaselineValue,
-    estimatedIncrementalValue,
     offerShown,
     offerViewed,
     offerClicked,
@@ -378,10 +359,6 @@ export function aggregatePerformance(campaigns: Campaign[]): AggregatePerformanc
   const estimatedExhaustionDate =
     burnRatePerDay > 0 && remainingBudget > 0 ? new Date(NOW.getTime() + (remainingBudget / burnRatePerDay) * 86_400_000).toISOString().slice(0, 10) : null
 
-  const estimatedBaselineValue = sum(perfs, (p) => p.estimatedBaselineValue)
-  const estimatedIncrementalValue = transactionValue - estimatedBaselineValue
-  const estimatedUpliftPct = estimatedBaselineValue > 0 ? (estimatedIncrementalValue / estimatedBaselineValue) * 100 : 0
-
   return {
     campaignsStarted: perfs.length,
     budget,
@@ -395,9 +372,6 @@ export function aggregatePerformance(campaigns: Campaign[]): AggregatePerformanc
     transactions,
     transactionValue,
     roi: cashbackIssued > 0 ? transactionValue / cashbackIssued : 0,
-    estimatedUpliftPct,
-    estimatedBaselineValue,
-    estimatedIncrementalValue,
     offerShown,
     offerViewed,
     offerClicked,
@@ -554,6 +528,32 @@ export function percentChange(current: number, previous: number): number | null 
   return ((current - previous) / previous) * 100
 }
 
+// --- day-of-week aggregation --------------------------------------------
+
+export type WeekdayPoint = { day: string; shortDay: string; isWeekend: boolean; transactions: number; transactionValue: number; cashbackIssued: number }
+
+const WEEKDAYS = [
+  { day: "Sunday", shortDay: "Sun", isWeekend: false },
+  { day: "Monday", shortDay: "Mon", isWeekend: false },
+  { day: "Tuesday", shortDay: "Tue", isWeekend: false },
+  { day: "Wednesday", shortDay: "Wed", isWeekend: false },
+  { day: "Thursday", shortDay: "Thu", isWeekend: false },
+  { day: "Friday", shortDay: "Fri", isWeekend: true },
+  { day: "Saturday", shortDay: "Sat", isWeekend: true },
+]
+
+/** GMV/transactions/cashback bucketed by day of week (UAE week: Fri-Sat weekend), derived from an already-generated daily series. */
+export function bucketByDayOfWeek(daily: DailyPoint[]): WeekdayPoint[] {
+  const totals = WEEKDAYS.map((w) => ({ ...w, transactions: 0, transactionValue: 0, cashbackIssued: 0 }))
+  for (const p of daily) {
+    const bucket = totals[new Date(p.date).getUTCDay()]
+    bucket.transactions += p.transactions
+    bucket.transactionValue += p.transactionValue
+    bucket.cashbackIssued += p.cashbackIssued
+  }
+  return totals
+}
+
 // --- transaction log --------------------------------------------------------
 
 const TERMINAL_POOL = ["Dubai Mall", "Mall of the Emirates", "Yas Mall, Abu Dhabi", "City Centre Deira", "Sharjah City Centre", "Abu Dhabi Corniche"]
@@ -568,6 +568,8 @@ export type TransactionRow = {
   channel: "online" | "in_store"
   terminalName: string
   status: "Rewarded" | "Pending settlement"
+  /** Masked customer reference for display in transaction logs — not a real identifier. */
+  customerRef: string
 }
 
 /** Individual transaction rows for the Transaction Log — expanded from each campaign's daily series so counts always foot to the Transactions KPI. */
@@ -586,6 +588,12 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
     const lastActiveIndex = [...perf.dailySeries].map((d) => d.transactions).lastIndexOf(Math.max(...perf.dailySeries.map((d) => d.transactions)))
     const adjustedDays = perf.dailySeries.map((d, i) => (i === lastActiveIndex ? { ...d, transactions: Math.max(0, d.transactions + drift) } : d))
 
+    // Route in-store rows through this brand's own registered terminals so Location Performance
+    // reflects the merchant's real terminal configuration, not a generic citywide pool.
+    const brandInStoreTerminals = terminalsForBrand(campaign.brandId, "in_store").map((t) => t.terminalName)
+    const brandOnlineTerminal = terminalsForBrand(campaign.brandId, "online")[0]?.terminalName ?? `${campaign.brandId}.ae checkout`
+    const inStorePool = brandInStoreTerminals.length > 0 ? brandInStoreTerminals : TERMINAL_POOL
+
     for (const day of adjustedDays) {
       for (let i = 0; i < day.transactions; i++) {
         const rowSeed = `${campaign.id}-${day.date}-${i}`
@@ -593,8 +601,9 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
         const cashback = Math.min(campaign.cashbackCap, Math.round((amount * campaign.cashbackPercentage) / 100))
         const channel: "online" | "in_store" =
           campaign.channel === "both" ? (seeded(rowSeed, 31, 0, 1) < 0.5 ? "online" : "in_store") : campaign.channel
-        const terminalName = channel === "online" ? `${campaign.brandId}.ae checkout` : TERMINAL_POOL[Math.floor(seeded(rowSeed, 32, 0, TERMINAL_POOL.length))]
+        const terminalName = channel === "online" ? brandOnlineTerminal : inStorePool[Math.floor(seeded(rowSeed, 32, 0, inStorePool.length))]
         const status = seeded(rowSeed, 33, 0, 1) < 0.04 ? "Pending settlement" : "Rewarded"
+        const customerRef = `CUST-${Math.floor(seeded(rowSeed, 34, 1000, 9999))}`
 
         rows.push({
           id: rowSeed,
@@ -606,6 +615,7 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
           channel,
           terminalName,
           status,
+          customerRef,
         })
       }
     }

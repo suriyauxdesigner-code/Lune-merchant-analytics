@@ -29,8 +29,10 @@ export function CampaignComparisonTable({ campaigns }: { campaigns: Campaign[] }
         <TableRow>
           <TableHead>Campaign</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Bank</TableHead>
           <TableHead>GMV</TableHead>
           <TableHead>Transactions</TableHead>
+          <TableHead>Customers</TableHead>
           <TableHead>Cashback</TableHead>
           <TableHead>ROI</TableHead>
           <TableHead>Budget used</TableHead>
@@ -47,8 +49,10 @@ export function CampaignComparisonTable({ campaigns }: { campaigns: Campaign[] }
               <TableCell>
                 <StatusBadge status={c.status} />
               </TableCell>
+              <TableCell className="text-muted-foreground">{c.distributionBank}</TableCell>
               <TableCell className="text-foreground">{formatAed(perf.transactionValue)}</TableCell>
               <TableCell className="text-foreground">{formatNumber(perf.transactions)}</TableCell>
+              <TableCell className="text-foreground">{formatNumber(perf.customersTransacted)}</TableCell>
               <TableCell className="text-foreground">{formatAed(perf.cashbackIssued)}</TableCell>
               <TableCell className="text-foreground">{formatRatio(perf.roi)}</TableCell>
               <TableCell className="text-foreground">{formatPercent(perf.utilizationPct)}</TableCell>

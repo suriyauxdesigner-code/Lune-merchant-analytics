@@ -54,6 +54,7 @@ export const BRANDS: Brand[] = [
         channel: "in_store",
         terminals: [
           { id: "tid-faces-3", terminalId: "TID-00930", channel: "in_store", terminalName: "Dubai Mall" },
+          { id: "tid-faces-4", terminalId: "TID-00931", channel: "in_store", terminalName: "Mall of the Emirates" },
         ],
       },
     ],
@@ -75,6 +76,8 @@ export const BRANDS: Brand[] = [
         terminals: [
           { id: "tid-tryano-1", terminalId: "TID-11002", channel: "in_store", terminalName: "Mall of the Emirates" },
           { id: "tid-tryano-2", terminalId: "TID-11003", channel: "online", terminalName: "tryano.ae checkout" },
+          { id: "tid-tryano-3", terminalId: "TID-11004", channel: "in_store", terminalName: "Dubai Mall" },
+          { id: "tid-tryano-4", terminalId: "TID-11005", channel: "in_store", terminalName: "City Centre Deira" },
         ],
       },
     ],
@@ -96,6 +99,8 @@ export const BRANDS: Brand[] = [
         terminals: [
           { id: "tid-tanagra-1", terminalId: "TID-20911", channel: "in_store", terminalName: "City Centre Deira" },
           { id: "tid-tanagra-2", terminalId: "TID-20912", channel: "online", terminalName: "tanagra.ae checkout" },
+          { id: "tid-tanagra-3", terminalId: "TID-20913", channel: "in_store", terminalName: "Yas Mall, Abu Dhabi" },
+          { id: "tid-tanagra-4", terminalId: "TID-20914", channel: "in_store", terminalName: "Sharjah City Centre" },
         ],
       },
     ],
@@ -117,6 +122,8 @@ export const BRANDS: Brand[] = [
         terminals: [
           { id: "tid-level-1", terminalId: "TID-30221", channel: "in_store", terminalName: "Dubai Mall" },
           { id: "tid-level-2", terminalId: "TID-30222", channel: "online", terminalName: "levelshoes.ae checkout" },
+          { id: "tid-level-3", terminalId: "TID-30223", channel: "in_store", terminalName: "Mall of the Emirates" },
+          { id: "tid-level-4", terminalId: "TID-30224", channel: "in_store", terminalName: "Yas Mall, Abu Dhabi" },
         ],
       },
     ],
@@ -835,4 +842,12 @@ export function campaignById(id: string) {
 
 export function campaignsForBrand(brandId: string) {
   return CAMPAIGNS.filter((c) => c.brandId === brandId)
+}
+
+/** Every terminal registered to a brand, flattened across its merchant IDs — optionally filtered to one channel. */
+export function terminalsForBrand(brandId: string, channel?: "online" | "in_store") {
+  const brand = brandById(brandId)
+  if (!brand) return []
+  const terminals = brand.merchantIds.flatMap((m) => m.terminals)
+  return channel ? terminals.filter((t) => t.channel === channel) : terminals
 }

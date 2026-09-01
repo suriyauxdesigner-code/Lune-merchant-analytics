@@ -2,13 +2,14 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import type { SeriesPoint } from "@/lib/mock-performance"
 import { formatCompactAed, formatNumber, formatRatio } from "@/lib/utils"
 
-export type ChartMetric = "gmv" | "transactions" | "cashback" | "roi"
+export type ChartMetric = "gmv" | "transactions" | "cashback" | "roi" | "aov"
 
 export const CHART_METRIC_OPTIONS: { value: ChartMetric; label: string }[] = [
   { value: "gmv", label: "GMV" },
   { value: "transactions", label: "Transactions" },
   { value: "cashback", label: "Cashback" },
   { value: "roi", label: "ROI" },
+  { value: "aov", label: "AOV" },
 ]
 
 const METRIC_CONFIG: Record<ChartMetric, { color: string; format: (v: number) => string }> = {
@@ -16,12 +17,14 @@ const METRIC_CONFIG: Record<ChartMetric, { color: string; format: (v: number) =>
   transactions: { color: "hsl(38 92% 45%)", format: formatNumber },
   cashback: { color: "hsl(217 91% 55%)", format: formatCompactAed },
   roi: { color: "hsl(266 65% 58%)", format: (v) => formatRatio(v) },
+  aov: { color: "hsl(340 70% 50%)", format: formatCompactAed },
 }
 
 function pointValue(p: SeriesPoint, metric: ChartMetric) {
   if (metric === "gmv") return p.transactionValue
   if (metric === "transactions") return p.transactions
   if (metric === "cashback") return p.cashbackIssued
+  if (metric === "aov") return p.transactions > 0 ? p.transactionValue / p.transactions : 0
   return p.cashbackIssued > 0 ? p.transactionValue / p.cashbackIssued : 0
 }
 

@@ -1,10 +1,22 @@
 import { cn } from "@/lib/utils"
 import { CHART_METRIC_OPTIONS, type ChartMetric } from "./performance-over-time-chart"
 
-export function MetricToggle({ value, onChange }: { value: ChartMetric; onChange: (metric: ChartMetric) => void }) {
+const DEFAULT_METRICS: ChartMetric[] = ["gmv", "transactions", "cashback", "roi"]
+
+export function MetricToggle({
+  value,
+  onChange,
+  metrics = DEFAULT_METRICS,
+}: {
+  value: ChartMetric
+  onChange: (metric: ChartMetric) => void
+  /** Which metrics to offer — levels differ (e.g. only Campaign Analytics offers AOV). Defaults to GMV/Transactions/Cashback/ROI. */
+  metrics?: ChartMetric[]
+}) {
+  const options = CHART_METRIC_OPTIONS.filter((o) => metrics.includes(o.value))
   return (
     <div className="inline-flex flex-wrap items-center gap-1 rounded-full bg-muted p-1">
-      {CHART_METRIC_OPTIONS.map((opt) => (
+      {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}

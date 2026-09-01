@@ -6,9 +6,11 @@ import type { MidStat } from "@/lib/transaction-stats"
 export function MidQualificationScatter({ mids }: { mids: MidStat[] }) {
   const avgQualification = mids.length > 0 ? mids.reduce((s, m) => s + m.qualificationRate, 0) / mids.length : 0
   const data = mids.map((m) => ({ ...m, isLow: m.qualificationRate < avgQualification - 5 }))
+  const minRate = mids.length > 0 ? Math.min(...mids.map((m) => m.qualificationRate)) : 50
+  const yFloor = Math.max(0, Math.floor((minRate - 10) / 10) * 10)
 
   return (
-    <div className="h-[280px] w-full">
+    <div className="h-[200px] w-full max-w-[560px]">
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
           <CartesianGrid stroke="hsl(220 16% 93%)" />
@@ -26,12 +28,13 @@ export function MidQualificationScatter({ mids }: { mids: MidStat[] }) {
             type="number"
             dataKey="qualificationRate"
             name="Qualification rate"
-            domain={[50, 100]}
+            domain={[yFloor, 100]}
             tickLine={false}
             axisLine={false}
+            tickCount={4}
             tick={{ fontSize: 11, fill: "hsl(220 9% 46%)" }}
             tickFormatter={(v) => `${v}%`}
-            width={44}
+            width={38}
           />
           <ZAxis dataKey="gmv" range={[80, 320]} />
           <Tooltip

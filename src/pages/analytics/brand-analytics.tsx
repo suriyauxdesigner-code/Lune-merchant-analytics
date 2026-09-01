@@ -1,57 +1,55 @@
 import * as React from "react"
 import { useParams } from "react-router-dom"
-import { Megaphone, Radio, CalendarClock, CheckCircle2, Wallet, Percent, Fingerprint, Cpu, Coins, Receipt, TrendingUp, Gauge } from "lucide-react"
+import { Store } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
-import { KpiCard } from "@/components/shared/kpi-card"
+import { KpiCard, KpiStrip } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
 import { BrandLogoTile } from "@/components/shared/brand-logo-tile"
 import { EmptyState } from "@/components/shared/empty-state"
-import { ChannelBadge } from "@/components/shared/channel-badge"
 import { FilterBar } from "@/components/analytics/filter-bar"
-import { CampaignComparisonTable } from "@/components/analytics/campaign-comparison-table"
-import { PerformanceOverTimeChart } from "@/components/analytics/performance-over-time-chart"
-import { ChannelPerformanceTable } from "@/components/analytics/channel-performance-table"
-import { MetricTiles } from "@/components/analytics/metric-tiles"
+import { PerformanceOverTimeChart, type ChartMode } from "@/components/analytics/performance-over-time-chart"
+import { BudgetHealthPanel } from "@/components/analytics/budget-health-panel"
+import { CustomerPerformancePanel } from "@/components/analytics/customer-performance-panel"
+import { CampaignPerformanceTabs } from "@/components/analytics/campaign-performance-tabs"
 import { MerchantDetails } from "@/components/analytics/merchant-details"
 import { brandById, campaignsForBrand } from "@/lib/data"
-import { formatAed, formatNumber, formatPercent } from "@/lib/utils"
+import { cn, formatAed, formatNumber, formatPercent } from "@/lib/utils"
 import { applyCampaignFilters, applyCampaignFiltersExceptDate, resolveDateRange, DEFAULT_FILTERS } from "@/lib/analytics-utils"
 import { aggregatePerformance, bucketSeries } from "@/lib/mock-performance"
-import type { Channel } from "@/lib/types"
-import { Store } from "lucide-react"
+import type { CampaignStatus } from "@/lib/types"
 
 export default function BrandAnalytics() {
   const { brandId = "" } = useParams()
   const brand = brandById(brandId)
   const [filters, setFilters] = React.useState(DEFAULT_FILTERS)
+  const [chartMode, setChartMode] = React.useState<ChartMode>("value")
+  const campaignSectionRef = React.useRef<HTMLDivElement>(null)
 
   const allCampaigns = React.useMemo(() => campaignsForBrand(brandId), [brandId])
   const filteredCampaigns = React.useMemo(() => applyCampaignFilters(allCampaigns, filters), [allCampaigns, filters])
   const nonDateCampaigns = React.useMemo(() => applyCampaignFiltersExceptDate(allCampaigns, filters), [allCampaigns, filters])
   const range = resolveDateRange(filters.dateRange, filters.customRange)
 
-  // Every widget on this page reads from filteredCampaigns so totals always foot to the visible Campaigns table.
+  // Every widget on this page reads from filteredCampaigns so totals always foot to the visible Campaign Performance table.
   const perf = React.useMemo(() => aggregatePerformance(filteredCampaigns), [filteredCampaigns])
   const chartSeries = React.useMemo(() => bucketSeries(aggregatePerformance(nonDateCampaigns).dailySeries, range), [nonDateCampaigns, range])
 
+  const statusCounts = React.useMemo(() => {
+    const base: Record<CampaignStatus, number> = { active: 0, pending_approval: 0, scheduled: 0, completed: 0, rejected: 0 }
+    for (const c of filteredCampaigns) base[c.status]++
+    return base
+  }, [filteredCampaigns])
+
   if (!brand) {
-    return (
-      <EmptyState
-        icon={<Store className="size-6" />}
-        title="Brand not found"
-        description="This brand doesn't exist in the sample dataset."
-      />
-    )
+    return <EmptyState icon={<Store className="size-6" />} title="Brand not found" description="This brand doesn't exist in the sample dataset." />
   }
 
-  const activeCount = filteredCampaigns.filter((c) => c.status === "active").length
-  const scheduledCount = filteredCampaigns.filter((c) => c.status === "scheduled").length
-  const completedCount = filteredCampaigns.filter((c) => c.status === "completed").length
   const totalBudget = filteredCampaigns.reduce((sum, c) => sum + c.budget, 0)
-  const avgCashback = filteredCampaigns.length ? filteredCampaigns.reduce((sum, c) => sum + c.cashbackPercentage, 0) / filteredCampaigns.length : 0
-  const merchantIdCount = brand.merchantIds.length
-  const terminalIdCount = brand.merchantIds.reduce((sum, m) => sum + m.terminals.length, 0)
-  const channels = [...new Set(filteredCampaigns.map((c) => c.channel))] as Channel[]
+
+  function reviewStatus(status: CampaignStatus) {
+    setFilters((f) => ({ ...f, status }))
+    campaignSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   return (
     <div>
@@ -66,84 +64,78 @@ export default function BrandAnalytics() {
         description={`Brand Analytics · ${brand.website}`}
         showPrototypeTag
       />
+      <p className="-mt-5 mb-7 text-sm text-muted-foreground">
+        {filteredCampaigns.length} campaign{filteredCampaigns.length === 1 ? "" : "s"} · {statusCounts.active} active · {statusCounts.scheduled} scheduled ·{" "}
+        {statusCounts.completed} completed
+      </p>
 
       <FilterBar filters={filters} onChange={setFilters} showBrand={false} />
 
-      {/* Brand overview (live) */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        <KpiCard label="Total campaigns" value={filteredCampaigns.length} icon={<Megaphone className="size-4" />} />
-        <KpiCard label="Active campaigns" value={activeCount} icon={<Radio className="size-4" />} />
-        <KpiCard label="Scheduled campaigns" value={scheduledCount} icon={<CalendarClock className="size-4" />} />
-        <KpiCard label="Completed campaigns" value={completedCount} icon={<CheckCircle2 className="size-4" />} />
-        <KpiCard label="Total campaign budget" value={formatAed(totalBudget)} icon={<Wallet className="size-4" />} />
-        <KpiCard label="Average cashback %" value={`${avgCashback.toFixed(1)}%`} icon={<Percent className="size-4" />} />
-        <KpiCard label="Merchant IDs" value={merchantIdCount} icon={<Fingerprint className="size-4" />} />
-        <KpiCard label="Terminal IDs" value={terminalIdCount} icon={<Cpu className="size-4" />} />
-        <KpiCard
-          label="Active channels"
-          value={
-            <span className="flex flex-wrap gap-1.5">
-              {channels.map((c) => (
-                <ChannelBadge key={c} channel={c} />
-              ))}
-            </span>
-          }
-        />
-      </div>
+      {filteredCampaigns.length === 0 ? (
+        <div className="rounded-[var(--radius)] border border-dashed border-border bg-muted/30 px-5 py-4 text-sm text-muted-foreground">
+          No campaigns match this date range and filter combination. Try widening the range or clearing a filter.
+        </div>
+      ) : (
+        <>
+          {/* Performance Overview */}
+          <KpiStrip>
+            <KpiCard variant="plain" label="Transaction Value" value={formatAed(perf.transactionValue)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" label="Cashback Issued" value={formatAed(perf.cashbackIssued)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" size="md" label="Transactions" value={formatNumber(perf.transactions)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" size="md" label="Budget Utilization" value={formatPercent(perf.utilizationPct)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" size="md" label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" size="md" label="Avg. Cashback / Transaction" value={formatAed(perf.avgCashbackPerTransaction)} tier="transaction" showTierBadge={false} />
+          </KpiStrip>
+          <p className="mt-2 text-xs text-muted-foreground">Transaction and cashback figures are prototype estimates — they require transaction/settlement data.</p>
 
-      {/* Brand performance KPIs (transaction tier) */}
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiCard label="Cashback Issued" value={formatAed(perf.cashbackIssued)} icon={<Coins className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Transactions" value={formatNumber(perf.transactions)} icon={<Receipt className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Transaction Value" value={formatAed(perf.transactionValue)} icon={<TrendingUp className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Budget Utilization" value={formatPercent(perf.utilizationPct)} icon={<Gauge className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Average Transaction Value" value={formatAed(perf.avgTransactionValue)} icon={<Receipt className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Average Cashback / Transaction" value={formatAed(perf.avgCashbackPerTransaction)} icon={<Percent className="size-3.5" />} tier="transaction" />
-      </div>
+          {/* Performance Over Time */}
+          <section className="mt-12">
+            <SectionCard
+              title="Performance Over Time"
+              description="Is performance improving or declining?"
+              contentClassName="pt-2"
+              actions={
+                <div className="inline-flex items-center gap-1 rounded-full bg-muted p-1">
+                  {(["value", "transactions"] as ChartMode[]).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setChartMode(m)}
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                        chartMode === m ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {m === "value" ? "Value" : "Transactions"}
+                    </button>
+                  ))}
+                </div>
+              }
+            >
+              <PerformanceOverTimeChart data={chartSeries} mode={chartMode} />
+            </SectionCard>
+          </section>
 
-      {/* Performance over time */}
-      <div className="mt-6">
-        <SectionCard title="Brand Performance Over Time" description="Transaction value, transactions and cashback issued over time">
-          <PerformanceOverTimeChart data={chartSeries} />
-        </SectionCard>
-      </div>
+          {/* Budget + Customer Performance */}
+          <section className="mt-14 grid gap-6 lg:grid-cols-2">
+            <BudgetHealthPanel budget={totalBudget} perf={perf} statusCounts={statusCounts} onReviewStatus={reviewStatus} />
+            <CustomerPerformancePanel perf={perf} />
+          </section>
 
-      {/* Campaigns */}
-      <div className="mt-4">
-        <SectionCard title="Campaigns" description="Click a campaign to open its analytics" contentClassName="px-4 pb-5 sm:px-5">
-          <CampaignComparisonTable campaigns={filteredCampaigns} />
-        </SectionCard>
-      </div>
+          {/* Campaign Performance */}
+          <section className="mt-14" ref={campaignSectionRef}>
+            <SectionCard title="Campaign Performance" description="Click a campaign to open its analytics" contentClassName="px-5 pb-5">
+              <CampaignPerformanceTabs campaigns={filteredCampaigns} />
+            </SectionCard>
+          </section>
 
-      {/* Channel performance */}
-      <div className="mt-4">
-        <SectionCard title="Campaigns by Channel" description="Campaign count, configured budget and prototype transaction performance by channel" contentClassName="px-4 pb-5 sm:px-5">
-          <ChannelPerformanceTable campaigns={filteredCampaigns} />
-        </SectionCard>
-      </div>
-
-      {/* Customer performance */}
-      <div className="mt-4">
-        <SectionCard title="Customer Performance" description="Reach and repeat behavior for this brand">
-          <MetricTiles
-            columns={5}
-            items={[
-              { key: "reached", label: "Customers Reached", value: formatNumber(perf.customersReached), tier: "future" },
-              { key: "transacted", label: "Customers Who Transacted", value: formatNumber(perf.customersTransacted), tier: "future" },
-              { key: "new", label: "New Customers", value: formatNumber(perf.newCustomers), tier: "future" },
-              { key: "returning", label: "Returning Customers", value: formatNumber(perf.returningCustomers), tier: "future" },
-              { key: "repeat", label: "Repeat Purchase Rate", value: formatPercent(perf.repeatPurchaseRate * 100), tier: "future" },
-            ]}
-          />
-        </SectionCard>
-      </div>
-
-      {/* Merchant Details */}
-      <div className="mt-4">
-        <SectionCard title="Merchant Details" description="This brand's linked merchant IDs, acquirers and terminals">
-          <MerchantDetails merchantIds={brand.merchantIds} />
-        </SectionCard>
-      </div>
+          {/* Merchant Details */}
+          <section className="mt-14">
+            <SectionCard title="Merchant Details" description="This brand's linked merchant IDs, acquirers and terminals">
+              <MerchantDetails merchantIds={brand.merchantIds} />
+            </SectionCard>
+          </section>
+        </>
+      )}
     </div>
   )
 }

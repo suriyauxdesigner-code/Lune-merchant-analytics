@@ -17,7 +17,6 @@ export function ChannelPerformanceTable({ campaigns }: { campaigns: Campaign[] }
           <TableHead>Transactions</TableHead>
           <TableHead>Transaction value</TableHead>
           <TableHead>Cashback issued</TableHead>
-          <TableHead>Avg. transaction value</TableHead>
           <TableHead>Budget utilization</TableHead>
         </TableRow>
       </TableHeader>
@@ -37,7 +36,6 @@ export function ChannelPerformanceTable({ campaigns }: { campaigns: Campaign[] }
               <TableCell className="text-foreground">{formatNumber(perf.transactions)}</TableCell>
               <TableCell className="text-foreground">{formatAed(perf.transactionValue)}</TableCell>
               <TableCell className="text-foreground">{formatAed(perf.cashbackIssued)}</TableCell>
-              <TableCell className="text-foreground">{formatAed(perf.avgTransactionValue)}</TableCell>
               <TableCell className="text-foreground">{formatPercent(perf.utilizationPct)}</TableCell>
             </TableRow>
           )

@@ -1,37 +1,40 @@
 import * as React from "react"
 import { useParams, Link } from "react-router-dom"
-import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Coins, Receipt, TrendingUp, Gauge, Clock, CalendarDays } from "lucide-react"
+import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Clock, CalendarDays } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
-import { KpiCard } from "@/components/shared/kpi-card"
+import { KpiCard, KpiStrip } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { ChannelBadge } from "@/components/shared/channel-badge"
 import { EmptyState } from "@/components/shared/empty-state"
 import { DetailGrid } from "@/components/analytics/detail-grid"
-import { BudgetOverview } from "@/components/analytics/budget-overview"
-import { PerformanceOverTimeChart } from "@/components/analytics/performance-over-time-chart"
-import { DateRangeSelect } from "@/components/analytics/date-range-select"
-import { MetricTiles } from "@/components/analytics/metric-tiles"
-import { CampaignFunnel } from "@/components/analytics/campaign-funnel"
-import { CampaignRoi } from "@/components/analytics/campaign-roi"
+import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
+import { MetricToggle } from "@/components/analytics/metric-toggle"
+import { BusinessImpactFlow } from "@/components/analytics/business-impact-flow"
+import { CustomerImpactSection } from "@/components/analytics/customer-impact-section"
 import { ChannelSplitTable } from "@/components/analytics/channel-split-table"
+import { QualificationBreakdown } from "@/components/analytics/qualification-breakdown"
+import { TransactionLogTable } from "@/components/analytics/transaction-log-table"
 import { campaignById, brandById } from "@/lib/data"
-import { formatAed, formatDate, formatNumber, formatPercent } from "@/lib/utils"
-import { durationLabel, resolveDateRange, type DateRangeKey, type DateRange } from "@/lib/analytics-utils"
-import { getCampaignPerformance, bucketSeries } from "@/lib/mock-performance"
-import { FUTURE_OPPORTUNITIES } from "@/lib/future-data"
+import { formatAed, formatDate, formatNumber, formatPercent, formatRatio } from "@/lib/utils"
+import { durationLabel } from "@/lib/analytics-utils"
+import { getCampaignPerformance, bucketSeries, generateTransactionRows } from "@/lib/mock-performance"
 import { Megaphone } from "lucide-react"
 
 export default function CampaignAnalytics() {
   const { campaignId = "" } = useParams()
   const campaign = campaignById(campaignId)
   const brand = campaign ? brandById(campaign.brandId) : undefined
-  const [chartRangeKey, setChartRangeKey] = React.useState<DateRangeKey>("90d")
-  const [chartCustomRange, setChartCustomRange] = React.useState<DateRange | undefined>(undefined)
+  const [chartMetric, setChartMetric] = React.useState<ChartMetric>("gmv")
 
   const perf = React.useMemo(() => (campaign ? getCampaignPerformance(campaign) : null), [campaign])
-  const chartRange = resolveDateRange(chartRangeKey, chartCustomRange)
-  const chartSeries = React.useMemo(() => (perf ? bucketSeries(perf.dailySeries, chartRange) : []), [perf, chartRange])
+  const chartSeries = React.useMemo(() => {
+    if (!perf || perf.dailySeries.length === 0) return []
+    const from = new Date(perf.dailySeries[0].date)
+    const to = new Date(perf.dailySeries[perf.dailySeries.length - 1].date)
+    return bucketSeries(perf.dailySeries, { from, to })
+  }, [perf])
+  const transactionRows = React.useMemo(() => (campaign ? generateTransactionRows([campaign]) : []), [campaign])
 
   if (!campaign || !brand || !perf) {
     return <EmptyState icon={<Megaphone className="size-6" />} title="Campaign not found" description="This campaign doesn't exist in the sample dataset." />
@@ -80,101 +83,66 @@ export default function CampaignAnalytics() {
         />
       </SectionCard>
 
-      {/* Performance KPIs */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiCard label="Cashback Issued" value={formatAed(perf.cashbackIssued)} icon={<Coins className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Transactions" value={formatNumber(perf.transactions)} icon={<Receipt className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Transaction Value" value={formatAed(perf.transactionValue)} icon={<TrendingUp className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Budget Utilization" value={formatPercent(perf.utilizationPct)} icon={<Gauge className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Average Transaction Value" value={formatAed(perf.avgTransactionValue)} icon={<Receipt className="size-3.5" />} tier="transaction" />
-        <KpiCard label="Average Cashback / Transaction" value={formatAed(perf.avgCashbackPerTransaction)} icon={<Percent className="size-3.5" />} tier="transaction" />
-      </div>
+      {/* Campaign Performance — did this campaign work? */}
+      <KpiStrip>
+        <KpiCard variant="plain" label="GMV" value={formatAed(perf.transactionValue)} tier="transaction" showTierBadge={false} />
+        <KpiCard variant="plain" label="Cashback Issued" value={formatAed(perf.cashbackIssued)} tier="transaction" showTierBadge={false} />
+        <KpiCard variant="plain" size="md" label="Transactions" value={formatNumber(perf.transactions)} tier="transaction" showTierBadge={false} />
+        <KpiCard variant="plain" size="md" label="ROI" value={formatRatio(perf.roi)} tier="transaction" showTierBadge={false} />
+        <KpiCard variant="plain" size="md" label="Budget Used" value={formatPercent(perf.utilizationPct)} tier="transaction" showTierBadge={false} />
+        <KpiCard variant="plain" size="md" label="Budget Remaining" value={formatAed(perf.remainingBudget)} tier="transaction" showTierBadge={false} />
+        <KpiCard variant="plain" size="md" label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} tier="transaction" showTierBadge={false} />
+      </KpiStrip>
+      <p className="mt-2 text-xs text-muted-foreground">Transaction and cashback figures are prototype estimates — they require transaction/settlement data.</p>
 
-      {/* Budget */}
-      <div className="mt-4">
-        <SectionCard title="Campaign Budget" description="Configured budget vs. actual cashback spend">
-          <BudgetOverview budget={campaign.budget} perf={perf} />
+      {/* Business Impact */}
+      <section className="mt-12">
+        <SectionCard title="Business Impact" description="How cashback investment turned into business generated">
+          <BusinessImpactFlow cashbackIssued={perf.cashbackIssued} transactions={perf.transactions} transactionValue={perf.transactionValue} roi={perf.roi} />
         </SectionCard>
-      </div>
+      </section>
 
-      {/* Performance chart */}
-      <div className="mt-4">
+      {/* Performance Over Time */}
+      <section className="mt-12">
         <SectionCard
-          title="Campaign Performance"
-          description="Transaction value, cashback issued and transactions over time"
-          actions={<DateRangeSelect value={chartRangeKey} customRange={chartCustomRange} onChange={(key, custom) => { setChartRangeKey(key); setChartCustomRange(custom) }} />}
+          title="Performance Over Time"
+          description="Campaign performance across its active duration"
+          contentClassName="pt-2"
+          actions={<MetricToggle value={chartMetric} onChange={setChartMetric} />}
         >
-          <PerformanceOverTimeChart data={chartSeries} />
+          <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
         </SectionCard>
-      </div>
+      </section>
 
-      {/* Customer performance */}
-      <div className="mt-4">
-        <SectionCard title="Customer Performance" description="Reach and repeat behavior for this campaign">
-          <MetricTiles
-            columns={5}
-            items={[
-              { key: "reached", label: "Customers Reached", value: formatNumber(perf.customersReached), tier: "future" },
-              { key: "transacted", label: "Customers Who Transacted", value: formatNumber(perf.customersTransacted), tier: "future" },
-              { key: "new", label: "New Customers", value: formatNumber(perf.newCustomers), tier: "future" },
-              { key: "returning", label: "Returning Customers", value: formatNumber(perf.returningCustomers), tier: "future" },
-              { key: "repeat", label: "Repeat Purchase Rate", value: formatPercent(perf.repeatPurchaseRate * 100), tier: "future" },
-            ]}
-          />
+      {/* Customer Response */}
+      <section className="mt-12">
+        <SectionCard title="Customer Response" description="From offer shown to cashback rewarded">
+          <CustomerImpactSection perf={perf} />
         </SectionCard>
-      </div>
+      </section>
 
-      {/* Funnel */}
-      <div className="mt-4">
-        <SectionCard title="Campaign Funnel" description="From offer shown to cashback issued">
-          <CampaignFunnel data={perf} />
-        </SectionCard>
-      </div>
-
-      {/* Conversion */}
-      <div className="mt-4">
-        <SectionCard title="Campaign Conversion" description="Conversion rates between funnel stages">
-          <MetricTiles
-            columns={4}
-            items={[
-              { key: "view-click", label: "View → Click Rate", value: formatPercent(perf.viewToClickRate * 100), tier: "future" },
-              { key: "click-txn", label: "Click → Transaction Rate", value: formatPercent(perf.clickToTransactionRate * 100), tier: "future" },
-              { key: "offer-txn", label: "Offer → Transaction Conversion", value: formatPercent(perf.offerToTransactionRate * 100), tier: "future" },
-              { key: "txn-cashback", label: "Transaction → Rewarded Rate", value: formatPercent(perf.transactionToCashbackRate * 100), tier: "transaction" },
-            ]}
-          />
-        </SectionCard>
-      </div>
-
-      {/* ROI */}
-      <div className="mt-4">
-        <SectionCard title="Campaign ROI" description="Return on investment for this campaign">
-          <CampaignRoi data={perf} />
-        </SectionCard>
-      </div>
-
-      {/* Channel performance */}
+      {/* Channel Performance */}
       {campaign.channel === "both" && perf.channelSplit?.online && perf.channelSplit?.in_store && (
-        <div className="mt-4">
-          <SectionCard title="Channel Performance" description="Online vs. in-store performance for this campaign" contentClassName="px-4 pb-5 sm:px-5">
+        <section className="mt-12">
+          <SectionCard title="Channel Performance" description="Online vs. in-store performance for this campaign">
             <ChannelSplitTable online={perf.channelSplit.online} inStore={perf.channelSplit.in_store} />
           </SectionCard>
-        </div>
+        </section>
       )}
 
-      {/* Future opportunities */}
-      <div className="mt-4">
-        <SectionCard title="Future Opportunities" description="What becomes more precise once transaction attribution and event data is instrumented">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FUTURE_OPPORTUNITIES.map((o) => (
-              <div key={o.title} className="rounded-[var(--radius-sm)] border border-border bg-muted/30 p-4">
-                <h5 className="text-sm font-semibold text-foreground">{o.title}</h5>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{o.description}</p>
-              </div>
-            ))}
-          </div>
+      {/* Qualification */}
+      <section className="mt-12">
+        <SectionCard title="Why Transactions Didn't Qualify" description="Attempted transactions that didn't receive cashback, and why">
+          <QualificationBreakdown buckets={perf.qualification} />
         </SectionCard>
-      </div>
+      </section>
+
+      {/* Transaction Log */}
+      <section className="mt-12">
+        <SectionCard title="Transaction Log" description="Individual transactions behind the numbers above" contentClassName="px-5 pb-5">
+          <TransactionLogTable rows={transactionRows} showCampaign={false} />
+        </SectionCard>
+      </section>
     </div>
   )
 }

@@ -1,6 +1,5 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ChannelBadge } from "@/components/shared/channel-badge"
-import { formatAed, formatNumber, formatPercent } from "@/lib/utils"
+import { formatAed, formatNumber, formatRatio } from "@/lib/utils"
 import type { ChannelPerf } from "@/lib/mock-performance"
 
 export function ChannelSplitTable({ online, inStore }: { online: ChannelPerf; inStore: ChannelPerf }) {
@@ -10,31 +9,30 @@ export function ChannelSplitTable({ online, inStore }: { online: ChannelPerf; in
   ]
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Channel</TableHead>
-          <TableHead>Transactions</TableHead>
-          <TableHead>Transaction value</TableHead>
-          <TableHead>Cashback issued</TableHead>
-          <TableHead>Avg. transaction value</TableHead>
-          <TableHead>Budget utilization</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map(({ channel, perf }) => (
-          <TableRow key={channel}>
-            <TableCell>
-              <ChannelBadge channel={channel} />
-            </TableCell>
-            <TableCell className="text-foreground">{formatNumber(perf.transactions)}</TableCell>
-            <TableCell className="text-foreground">{formatAed(perf.transactionValue)}</TableCell>
-            <TableCell className="text-foreground">{formatAed(perf.cashbackIssued)}</TableCell>
-            <TableCell className="text-foreground">{formatAed(perf.avgTransactionValue)}</TableCell>
-            <TableCell className="text-foreground">{formatPercent(perf.utilizationPct)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div className="grid gap-4 sm:grid-cols-2">
+      {rows.map(({ channel, perf }) => (
+        <div key={channel} className="rounded-[var(--radius-sm)] border border-border bg-card p-5">
+          <ChannelBadge channel={channel} />
+          <dl className="mt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <dt className="text-xs text-muted-foreground">GMV</dt>
+              <dd className="text-sm font-semibold text-foreground">{formatAed(perf.transactionValue)}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-xs text-muted-foreground">Transactions</dt>
+              <dd className="text-sm font-semibold text-foreground">{formatNumber(perf.transactions)}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-xs text-muted-foreground">Cashback</dt>
+              <dd className="text-sm font-semibold text-foreground">{formatAed(perf.cashbackIssued)}</dd>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <dt className="text-xs text-muted-foreground">ROI</dt>
+              <dd className="text-sm font-semibold text-foreground">{formatRatio(perf.roi)}</dd>
+            </div>
+          </dl>
+        </div>
+      ))}
+    </div>
   )
 }

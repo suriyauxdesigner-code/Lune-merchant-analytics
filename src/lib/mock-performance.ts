@@ -10,6 +10,14 @@ import { NOW, type DateRange } from "./analytics-utils"
 // each render, so the same campaign always shows the same numbers and brand/
 // main-level totals always foot to the sum of their campaigns.
 //
+// "GMV" (gross transaction value) and "ROI" here are computed from two
+// available (mock) numbers — transaction value and cashback cost — never
+// from a fabricated attribution or baseline/control assumption. True
+// incremental impact (the business generated *because of* the campaign,
+// versus what would have happened anyway) is NOT modeled here — that
+// requires attribution methodology Pulse doesn't have, and this file
+// deliberately does not pretend otherwise.
+//
 // Tiers (shown as small badges in the UI, never as locks):
 //  - "live"        available today from Pulse's existing config data
 //  - "transaction" requires transaction/settlement data from the backend
@@ -21,7 +29,7 @@ export type DataTier = "live" | "transaction" | "future"
 export const TIER_LABEL: Record<DataTier, string> = {
   live: "Live",
   transaction: "Requires transaction data",
-  future: "Future capability",
+  future: "Coming soon",
 }
 
 // --- deterministic seeded "randomness" ---------------------------------
@@ -52,7 +60,12 @@ export type ChannelPerf = {
   cashbackIssued: number
   avgTransactionValue: number
   utilizationPct: number
+  roi: number
 }
+
+export type QualificationReason = "Minimum spend not met" | "Outside campaign period" | "Invalid merchant/terminal" | "Other"
+
+export type QualificationBucket = { reason: QualificationReason; count: number }
 
 export type CampaignPerformance = {
   hasStarted: boolean
@@ -63,8 +76,7 @@ export type CampaignPerformance = {
   avgCashbackPerTransaction: number
   transactions: number
   transactionValue: number
-  burnRatePerDay: number
-  estimatedExhaustionDate: string | null
+  roi: number
   offerShown: number
   offerViewed: number
   offerClicked: number
@@ -78,16 +90,18 @@ export type CampaignPerformance = {
   newCustomers: number
   returningCustomers: number
   repeatPurchaseRate: number
-  campaignSpend: number
-  attributedTransactionValue: number
-  estimatedRevenue: number
-  roas: number
-  roiPct: number
-  costPerTransaction: number
-  cashbackCostPerAed: number
+  qualification: QualificationBucket[]
+  disqualifiedCount: number
   channelSplit: Partial<Record<Channel, ChannelPerf>> | null
   dailySeries: DailyPoint[]
 }
+
+const ZERO_QUALIFICATION: QualificationBucket[] = [
+  { reason: "Minimum spend not met", count: 0 },
+  { reason: "Outside campaign period", count: 0 },
+  { reason: "Invalid merchant/terminal", count: 0 },
+  { reason: "Other", count: 0 },
+]
 
 const ZERO_PERF: Omit<CampaignPerformance, "hasStarted"> = {
   utilizationPct: 0,
@@ -97,8 +111,7 @@ const ZERO_PERF: Omit<CampaignPerformance, "hasStarted"> = {
   avgCashbackPerTransaction: 0,
   transactions: 0,
   transactionValue: 0,
-  burnRatePerDay: 0,
-  estimatedExhaustionDate: null,
+  roi: 0,
   offerShown: 0,
   offerViewed: 0,
   offerClicked: 0,
@@ -112,13 +125,8 @@ const ZERO_PERF: Omit<CampaignPerformance, "hasStarted"> = {
   newCustomers: 0,
   returningCustomers: 0,
   repeatPurchaseRate: 0,
-  campaignSpend: 0,
-  attributedTransactionValue: 0,
-  estimatedRevenue: 0,
-  roas: 0,
-  roiPct: 0,
-  costPerTransaction: 0,
-  cashbackCostPerAed: 0,
+  qualification: ZERO_QUALIFICATION,
+  disqualifiedCount: 0,
   channelSplit: null,
   dailySeries: [],
 }
@@ -145,7 +153,6 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
 
   const activatedAt = new Date(campaign.activatedAt)
   const windowEnd = campaign.completedAt ? new Date(campaign.completedAt) : NOW
-  const activeDays = Math.max(1, daysBetween(activatedAt, windowEnd))
 
   const isCompleted = campaign.status === "completed"
   const utilizationPct = seeded(id, 1, isCompleted ? 74 : 28, isCompleted ? 98 : 79)
@@ -158,10 +165,7 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
 
   const transactions = Math.max(1, Math.round(cashbackIssued / Math.max(1, avgCashbackPerTransaction)))
   const transactionValue = transactions * avgTransactionValue
-
-  const burnRatePerDay = cashbackIssued / activeDays
-  const estimatedExhaustionDate =
-    campaign.status === "active" && burnRatePerDay > 0 ? new Date(NOW.getTime() + (remainingBudget / burnRatePerDay) * 86_400_000).toISOString() : null
+  const roi = cashbackIssued > 0 ? transactionValue / cashbackIssued : 0
 
   // Funnel — built upward from `transactions` so every widget agrees on the same count.
   const clickToTransactionRate = seeded(id, 4, 0.18, 0.35)
@@ -181,15 +185,20 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
   const newCustomers = customersTransacted - returningCustomers
   const repeatPurchaseRate = customersTransacted > 0 ? returningCustomers / customersTransacted : 0
 
-  // ROI (explicitly a prototype estimate — requires attribution + a control group in reality)
-  const campaignSpend = cashbackIssued
-  const attributionFactor = seeded(id, 11, 0.35, 0.65)
-  const attributedTransactionValue = Math.round(transactionValue * attributionFactor)
-  const estimatedRevenue = attributedTransactionValue
-  const roas = campaignSpend > 0 ? attributedTransactionValue / campaignSpend : 0
-  const roiPct = campaignSpend > 0 ? ((attributedTransactionValue - campaignSpend) / campaignSpend) * 100 : 0
-  const costPerTransaction = transactions > 0 ? campaignSpend / transactions : 0
-  const cashbackCostPerAed = transactionValue > 0 ? campaignSpend / transactionValue : 0
+  // Qualification — attempted transactions that didn't clear the campaign's own rules
+  // (minimum spend, active window, merchant/terminal registration). Derived from the
+  // same transaction count so it scales with actual campaign activity.
+  const disqualifiedCount = Math.round(transactions * seeded(id, 13, 0.08, 0.22))
+  const minSpendShare = seeded(id, 14, 0.38, 0.55)
+  const outsidePeriodShare = seeded(id, 15, 0.14, 0.26)
+  const invalidTerminalShare = seeded(id, 16, 0.08, 0.18)
+  const otherShare = Math.max(0, 1 - minSpendShare - outsidePeriodShare - invalidTerminalShare)
+  const qualification: QualificationBucket[] = [
+    { reason: "Minimum spend not met", count: Math.round(disqualifiedCount * minSpendShare) },
+    { reason: "Outside campaign period", count: Math.round(disqualifiedCount * outsidePeriodShare) },
+    { reason: "Invalid merchant/terminal", count: Math.round(disqualifiedCount * invalidTerminalShare) },
+    { reason: "Other", count: Math.round(disqualifiedCount * otherShare) },
+  ]
 
   const channelSplit = campaign.channel === "both" ? buildChannelSplit(id, { transactions, transactionValue, cashbackIssued, avgTransactionValue, utilizationPct }) : null
 
@@ -204,8 +213,7 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
     avgCashbackPerTransaction,
     transactions,
     transactionValue,
-    burnRatePerDay,
-    estimatedExhaustionDate,
+    roi,
     offerShown,
     offerViewed,
     offerClicked,
@@ -219,13 +227,8 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
     newCustomers,
     returningCustomers,
     repeatPurchaseRate,
-    campaignSpend,
-    attributedTransactionValue,
-    estimatedRevenue,
-    roas,
-    roiPct,
-    costPerTransaction,
-    cashbackCostPerAed,
+    qualification,
+    disqualifiedCount,
     channelSplit,
     dailySeries,
   }
@@ -240,21 +243,25 @@ function buildChannelSplit(
   const inStoreTransactions = totals.transactions - onlineTransactions
   const onlineCashback = Math.round(totals.cashbackIssued * onlineShare)
   const inStoreCashback = totals.cashbackIssued - onlineCashback
+  const onlineValue = onlineTransactions * totals.avgTransactionValue
+  const inStoreValue = inStoreTransactions * totals.avgTransactionValue
 
   return {
     online: {
       transactions: onlineTransactions,
-      transactionValue: onlineTransactions * totals.avgTransactionValue,
+      transactionValue: onlineValue,
       cashbackIssued: onlineCashback,
       avgTransactionValue: totals.avgTransactionValue,
       utilizationPct: totals.utilizationPct * onlineShare * 2 * (onlineTransactions / Math.max(1, totals.transactions)),
+      roi: onlineCashback > 0 ? onlineValue / onlineCashback : 0,
     },
     in_store: {
       transactions: inStoreTransactions,
-      transactionValue: inStoreTransactions * totals.avgTransactionValue,
+      transactionValue: inStoreValue,
       cashbackIssued: inStoreCashback,
       avgTransactionValue: totals.avgTransactionValue,
       utilizationPct: totals.utilizationPct * (1 - onlineShare) * 2 * (inStoreTransactions / Math.max(1, totals.transactions)),
+      roi: inStoreCashback > 0 ? inStoreValue / inStoreCashback : 0,
     },
   }
 }
@@ -300,9 +307,8 @@ function buildDailySeries(
 
 // --- aggregation ----------------------------------------------------------
 
-export type AggregatePerformance = Omit<CampaignPerformance, "hasStarted" | "channelSplit" | "estimatedExhaustionDate"> & {
+export type AggregatePerformance = Omit<CampaignPerformance, "hasStarted" | "channelSplit"> & {
   campaignsStarted: number
-  estimatedExhaustionDate: string | null
   /** Configured budget behind this aggregate — for channel buckets this includes the proportional split of "both"-channel campaigns, so it always matches utilizationPct's denominator. */
   budget: number
 }
@@ -322,15 +328,13 @@ export function aggregatePerformance(campaigns: Campaign[]): AggregatePerformanc
   const customersTransacted = sum(perfs, (p) => p.customersTransacted)
   const newCustomers = sum(perfs, (p) => p.newCustomers)
   const returningCustomers = sum(perfs, (p) => p.returningCustomers)
-  const campaignSpend = sum(perfs, (p) => p.campaignSpend)
-  const attributedTransactionValue = sum(perfs, (p) => p.attributedTransactionValue)
-  const estimatedRevenue = sum(perfs, (p) => p.estimatedRevenue)
-  const burnRatePerDay = sum(perfs, (p) => p.burnRatePerDay)
+  const disqualifiedCount = sum(perfs, (p) => p.disqualifiedCount)
   const remainingBudget = budget - cashbackIssued
 
-  const activeWithBurn = perfs.filter((x) => x.c.status === "active" && x.p.burnRatePerDay > 0)
-  const estimatedExhaustionDate =
-    activeWithBurn.length > 0 && burnRatePerDay > 0 ? new Date(NOW.getTime() + (remainingBudget / burnRatePerDay) * 86_400_000).toISOString() : null
+  const qualification: QualificationBucket[] = ZERO_QUALIFICATION.map((z) => ({
+    reason: z.reason,
+    count: perfs.reduce((s, x) => s + (x.p.qualification.find((q) => q.reason === z.reason)?.count ?? 0), 0),
+  }))
 
   return {
     campaignsStarted: perfs.length,
@@ -342,8 +346,7 @@ export function aggregatePerformance(campaigns: Campaign[]): AggregatePerformanc
     avgCashbackPerTransaction: transactions > 0 ? cashbackIssued / transactions : 0,
     transactions,
     transactionValue,
-    burnRatePerDay,
-    estimatedExhaustionDate,
+    roi: cashbackIssued > 0 ? transactionValue / cashbackIssued : 0,
     offerShown,
     offerViewed,
     offerClicked,
@@ -357,13 +360,8 @@ export function aggregatePerformance(campaigns: Campaign[]): AggregatePerformanc
     newCustomers,
     returningCustomers,
     repeatPurchaseRate: customersTransacted > 0 ? returningCustomers / customersTransacted : 0,
-    campaignSpend,
-    attributedTransactionValue,
-    estimatedRevenue,
-    roas: campaignSpend > 0 ? attributedTransactionValue / campaignSpend : 0,
-    roiPct: campaignSpend > 0 ? ((attributedTransactionValue - campaignSpend) / campaignSpend) * 100 : 0,
-    costPerTransaction: transactions > 0 ? campaignSpend / transactions : 0,
-    cashbackCostPerAed: transactionValue > 0 ? campaignSpend / transactionValue : 0,
+    qualification,
+    disqualifiedCount,
     dailySeries: mergeDailySeries(perfs.map((x) => x.p.dailySeries)),
   }
 }
@@ -424,10 +422,11 @@ export function aggregateChannelPerformance(campaigns: Campaign[], channel: Chan
     avgCashbackPerTransaction: transactions > 0 ? cashbackIssued / transactions : 0,
     utilizationPct: budget > 0 ? (cashbackIssued / budget) * 100 : 0,
     remainingBudget: budget - cashbackIssued,
+    roi: cashbackIssued > 0 ? transactionValue / cashbackIssued : 0,
   }
 }
 
-// --- charting helper --------------------------------------------------------
+// --- charting + period comparison helpers ----------------------------------
 
 export type SeriesPoint = { label: string; transactions: number; transactionValue: number; cashbackIssued: number }
 
@@ -466,4 +465,100 @@ export function bucketSeries(daily: DailyPoint[], range: DateRange): SeriesPoint
     }
   }
   return [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v)
+}
+
+export type PeriodTotals = { transactions: number; transactionValue: number; cashbackIssued: number; avgTransactionValue: number; roi: number }
+
+/** Sums a merged daily series within an arbitrary [from, to] window — used to compare the current period against the one before it. */
+export function sumSeriesInRange(daily: DailyPoint[], range: DateRange): PeriodTotals {
+  let transactions = 0
+  let transactionValue = 0
+  let cashbackIssued = 0
+  for (const p of daily) {
+    const d = new Date(p.date)
+    if (d >= range.from && d <= range.to) {
+      transactions += p.transactions
+      transactionValue += p.transactionValue
+      cashbackIssued += p.cashbackIssued
+    }
+  }
+  return {
+    transactions,
+    transactionValue,
+    cashbackIssued,
+    avgTransactionValue: transactions > 0 ? Math.round(transactionValue / transactions) : 0,
+    roi: cashbackIssued > 0 ? transactionValue / cashbackIssued : 0,
+  }
+}
+
+/** The immediately preceding window of equal length to `range` — e.g. "Last 30 days" -> the 30 days before that. */
+export function previousPeriod(range: DateRange): DateRange {
+  const spanMs = range.to.getTime() - range.from.getTime()
+  return { from: new Date(range.from.getTime() - spanMs - 86_400_000), to: new Date(range.from.getTime() - 86_400_000) }
+}
+
+/** % change from previous -> current, or null when there's no prior-period activity to compare against. */
+export function percentChange(current: number, previous: number): number | null {
+  if (previous <= 0) return null
+  return ((current - previous) / previous) * 100
+}
+
+// --- transaction log --------------------------------------------------------
+
+const TERMINAL_POOL = ["Dubai Mall", "Mall of the Emirates", "Yas Mall, Abu Dhabi", "City Centre Deira", "Sharjah City Centre", "Abu Dhabi Corniche"]
+
+export type TransactionRow = {
+  id: string
+  date: string // ISO date
+  campaignId: string
+  brandId: string
+  amount: number
+  cashback: number
+  channel: "online" | "in_store"
+  terminalName: string
+  status: "Rewarded" | "Pending settlement"
+}
+
+/** Individual transaction rows for the Transaction Log — expanded from each campaign's daily series so counts always foot to the Transactions KPI. */
+export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[] {
+  const rows: TransactionRow[] = []
+
+  for (const campaign of campaigns) {
+    const perf = getCampaignPerformance(campaign)
+    if (!perf.hasStarted || perf.dailySeries.length === 0) continue
+
+    // Daily counts are independently rounded per bucket, so they can drift a little from the
+    // authoritative `transactions` total shown everywhere else. Correct the last active day so
+    // the log always foots exactly to that number.
+    const dailySum = perf.dailySeries.reduce((s, d) => s + d.transactions, 0)
+    const drift = perf.transactions - dailySum
+    const lastActiveIndex = [...perf.dailySeries].map((d) => d.transactions).lastIndexOf(Math.max(...perf.dailySeries.map((d) => d.transactions)))
+    const adjustedDays = perf.dailySeries.map((d, i) => (i === lastActiveIndex ? { ...d, transactions: Math.max(0, d.transactions + drift) } : d))
+
+    for (const day of adjustedDays) {
+      for (let i = 0; i < day.transactions; i++) {
+        const rowSeed = `${campaign.id}-${day.date}-${i}`
+        const amount = Math.max(1, Math.round(perf.avgTransactionValue * seeded(rowSeed, 30, 0.65, 1.4)))
+        const cashback = Math.min(campaign.cashbackCap, Math.round((amount * campaign.cashbackPercentage) / 100))
+        const channel: "online" | "in_store" =
+          campaign.channel === "both" ? (seeded(rowSeed, 31, 0, 1) < 0.5 ? "online" : "in_store") : campaign.channel
+        const terminalName = channel === "online" ? `${campaign.brandId}.ae checkout` : TERMINAL_POOL[Math.floor(seeded(rowSeed, 32, 0, TERMINAL_POOL.length))]
+        const status = seeded(rowSeed, 33, 0, 1) < 0.04 ? "Pending settlement" : "Rewarded"
+
+        rows.push({
+          id: rowSeed,
+          date: day.date,
+          campaignId: campaign.id,
+          brandId: campaign.brandId,
+          amount,
+          cashback,
+          channel,
+          terminalName,
+          status,
+        })
+      }
+    }
+  }
+
+  return rows.sort((a, b) => b.date.localeCompare(a.date))
 }

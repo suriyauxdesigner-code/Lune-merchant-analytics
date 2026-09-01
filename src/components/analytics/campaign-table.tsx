@@ -3,43 +3,45 @@ import { useNavigate } from "react-router-dom"
 import { ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { ChannelBadge } from "@/components/shared/channel-badge"
 import { BrandLogoTile } from "@/components/shared/brand-logo-tile"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { formatAed, formatNumber, formatPercent, formatShortDate } from "@/lib/utils"
-import { durationLabel } from "@/lib/analytics-utils"
+import { formatAed, formatNumber, formatPercent, formatRatio } from "@/lib/utils"
 import { brandById } from "@/lib/data"
 import { getCampaignPerformance } from "@/lib/mock-performance"
 import type { Campaign } from "@/lib/types"
 import { PackageSearch } from "lucide-react"
 
-type SortKey = "budget" | "cashbackPercentage" | "startDate" | null
+type SortKey = "gmv" | "transactions" | "cashback" | "roi" | "budgetUsed"
 
+/** The Main Analytics "Campaign Performance" table — which campaigns are driving the business results, sorted business-first (GMV by default). */
 export function CampaignTable({ campaigns, showBrand = true }: { campaigns: Campaign[]; showBrand?: boolean }) {
   const navigate = useNavigate()
-  const [sortKey, setSortKey] = React.useState<SortKey>(null)
+  const [sortKey, setSortKey] = React.useState<SortKey>("gmv")
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc")
   const [page, setPage] = React.useState(0)
   const [pageSize, setPageSize] = React.useState(8)
 
   React.useEffect(() => setPage(0), [campaigns.length, pageSize])
 
+  const rows = React.useMemo(() => campaigns.map((c) => ({ campaign: c, perf: getCampaignPerformance(c) })), [campaigns])
+
   const sorted = React.useMemo(() => {
-    if (!sortKey) return campaigns
-    const copy = [...campaigns]
+    const copy = [...rows]
     copy.sort((a, b) => {
-      const av = sortKey === "startDate" ? new Date(a.startDate).getTime() : a[sortKey]
-      const bv = sortKey === "startDate" ? new Date(b.startDate).getTime() : b[sortKey]
+      const av =
+        sortKey === "gmv" ? a.perf.transactionValue : sortKey === "transactions" ? a.perf.transactions : sortKey === "cashback" ? a.perf.cashbackIssued : sortKey === "roi" ? a.perf.roi : a.perf.utilizationPct
+      const bv =
+        sortKey === "gmv" ? b.perf.transactionValue : sortKey === "transactions" ? b.perf.transactions : sortKey === "cashback" ? b.perf.cashbackIssued : sortKey === "roi" ? b.perf.roi : b.perf.utilizationPct
       return sortDir === "asc" ? av - bv : bv - av
     })
     return copy
-  }, [campaigns, sortKey, sortDir])
+  }, [rows, sortKey, sortDir])
 
   const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize))
   const pageRows = sorted.slice(page * pageSize, page * pageSize + pageSize)
 
-  function toggleSort(key: Exclude<SortKey, null>) {
+  function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
     else {
       setSortKey(key)
@@ -65,21 +67,16 @@ export function CampaignTable({ campaigns, showBrand = true }: { campaigns: Camp
             <TableHead>Campaign</TableHead>
             {showBrand && <TableHead>Brand</TableHead>}
             <TableHead>Status</TableHead>
-            <SortableHead label="Budget" active={sortKey === "budget"} dir={sortDir} onClick={() => toggleSort("budget")} />
-            <SortableHead label="Cashback %" active={sortKey === "cashbackPercentage"} dir={sortDir} onClick={() => toggleSort("cashbackPercentage")} />
-            <SortableHead label="Start date" active={sortKey === "startDate"} dir={sortDir} onClick={() => toggleSort("startDate")} />
-            <TableHead>End date</TableHead>
-            <TableHead>Channel</TableHead>
-            <TableHead>Transactions</TableHead>
-            <TableHead>Transaction value</TableHead>
-            <TableHead>Cashback issued</TableHead>
-            <TableHead>Budget utilization</TableHead>
+            <SortableHead label="GMV" active={sortKey === "gmv"} dir={sortDir} onClick={() => toggleSort("gmv")} />
+            <SortableHead label="Transactions" active={sortKey === "transactions"} dir={sortDir} onClick={() => toggleSort("transactions")} />
+            <SortableHead label="Cashback" active={sortKey === "cashback"} dir={sortDir} onClick={() => toggleSort("cashback")} />
+            <SortableHead label="ROI" active={sortKey === "roi"} dir={sortDir} onClick={() => toggleSort("roi")} />
+            <SortableHead label="Budget used" active={sortKey === "budgetUsed"} dir={sortDir} onClick={() => toggleSort("budgetUsed")} />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pageRows.map((c) => {
+          {pageRows.map(({ campaign: c, perf }) => {
             const brand = brandById(c.brandId)
-            const perf = getCampaignPerformance(c)
             return (
               <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/analytics/campaigns/${c.id}`)}>
                 <TableCell>
@@ -96,16 +93,10 @@ export function CampaignTable({ campaigns, showBrand = true }: { campaigns: Camp
                 <TableCell>
                   <StatusBadge status={c.status} />
                 </TableCell>
-                <TableCell className="text-foreground">{formatAed(c.budget)}</TableCell>
-                <TableCell className="text-foreground">{c.cashbackPercentage}%</TableCell>
-                <TableCell className="text-muted-foreground">{formatShortDate(c.startDate)}</TableCell>
-                <TableCell className="text-muted-foreground">{c.endDate ? formatShortDate(c.endDate) : durationLabel(c)}</TableCell>
-                <TableCell>
-                  <ChannelBadge channel={c.channel} />
-                </TableCell>
-                <TableCell className="text-foreground">{formatNumber(perf.transactions)}</TableCell>
                 <TableCell className="text-foreground">{formatAed(perf.transactionValue)}</TableCell>
+                <TableCell className="text-foreground">{formatNumber(perf.transactions)}</TableCell>
                 <TableCell className="text-foreground">{formatAed(perf.cashbackIssued)}</TableCell>
+                <TableCell className="text-foreground">{formatRatio(perf.roi)}</TableCell>
                 <TableCell className="text-foreground">{formatPercent(perf.utilizationPct)}</TableCell>
               </TableRow>
             )

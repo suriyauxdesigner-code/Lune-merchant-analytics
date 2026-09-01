@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { ArrowDown, ArrowUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { DataTier } from "@/lib/mock-performance"
 
@@ -26,6 +27,7 @@ export function KpiCard({
   tierLabel,
   icon,
   hint,
+  deltaPct,
   className,
   variant = "card",
   size = "lg",
@@ -39,6 +41,8 @@ export function KpiCard({
   tierLabel?: string
   icon?: ReactNode
   hint?: string
+  /** % change vs. the previous period of equal length. Omit (or null) when there's no prior-period activity to compare against. */
+  deltaPct?: number | null
   className?: string
   /** "card" (default): bordered tile. "plain": no border/shadow — for use as a cell inside KpiStrip. */
   variant?: "card" | "plain"
@@ -58,10 +62,25 @@ export function KpiCard({
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
         {icon && <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">{icon}</div>}
       </div>
-      <p className={cn("mt-2.5 font-bold text-foreground", size === "lg" ? "text-2xl" : "text-lg")}>{value}</p>
+      <div className="mt-2.5 flex items-baseline gap-2">
+        <p className={cn("font-bold text-foreground", size === "lg" ? "text-2xl" : "text-lg")}>{value}</p>
+        {deltaPct != null && <DeltaBadge pct={deltaPct} />}
+      </div>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-2" />}
     </div>
+  )
+}
+
+/** Small up/down indicator comparing the current period to the one before it. */
+export function DeltaBadge({ pct }: { pct: number }) {
+  const isUp = pct >= 0
+  const Icon = isUp ? ArrowUp : ArrowDown
+  return (
+    <span className={cn("flex items-center gap-0.5 text-xs font-semibold", isUp ? "text-success" : "text-destructive")}>
+      <Icon className="size-3" />
+      {Math.abs(pct).toFixed(1)}%
+    </span>
   )
 }
 

@@ -1,31 +1,20 @@
 // ---------------------------------------------------------------------------
-// Narrative content for widgets that show prototype numbers (see
-// mock-performance.ts for the numbers themselves) plus the handful of
-// genuinely future-only concepts that aren't worth mocking numbers for.
+// Narrative copy paired with the numbers in mock-performance.ts.
 // ---------------------------------------------------------------------------
 
-export type FunnelStageMeta = { key: "offer_shown" | "offer_viewed" | "offer_clicked" | "transaction" | "cashback_issued"; label: string }
+export type FunnelStageMeta = { key: "offer_shown" | "offer_viewed" | "offer_clicked" | "transaction" | "rewarded"; label: string }
 
 export const FUNNEL_STAGES: FunnelStageMeta[] = [
-  { key: "offer_shown", label: "Offer Shown" },
-  { key: "offer_viewed", label: "Offer Viewed" },
-  { key: "offer_clicked", label: "Offer Clicked" },
-  { key: "transaction", label: "Transaction" },
-  { key: "cashback_issued", label: "Cashback Issued" },
+  { key: "offer_shown", label: "Shown" },
+  { key: "offer_viewed", label: "Viewed" },
+  { key: "offer_clicked", label: "Clicked" },
+  { key: "transaction", label: "Transacted" },
+  // Distinct from the "Cashback Issued" AED figure shown elsewhere — this is a count of transactions, not a value.
+  { key: "rewarded", label: "Rewarded" },
 ]
 
-export const CAMPAIGN_ROI_REQUIREMENTS = ["Transaction data", "Campaign cost", "Incremental revenue attribution", "Control/baseline methodology"]
+/** GMV and ROI below are real ratios of two available (mock) numbers — never a fabricated attribution or baseline assumption. */
+export const INCREMENTAL_IMPACT_NOTE =
+  "GMV and ROI reflect total transaction value against cashback cost — not incremental revenue. Measuring the business this campaign generated beyond what would have happened anyway requires transaction attribution and a control/baseline group, which Pulse doesn't yet support."
 
-export const CAMPAIGN_ROI_EXPLANATION =
-  "These figures are a prototype estimate. True ROI requires transaction attribution and a control/baseline group to isolate revenue the campaign actually caused — transaction value alone is not the same as incremental revenue."
-
-export type FutureOpportunity = { title: string; description: string }
-
-export const FUTURE_OPPORTUNITIES: FutureOpportunity[] = [
-  { title: "Incremental Revenue", description: "Requires transaction attribution and control/baseline measurement." },
-  { title: "Customer Lifetime Value", description: "Requires longitudinal customer transaction history." },
-  { title: "Customer Demographics", description: "Requires privacy-safe customer profile data." },
-  { title: "Product / Category Performance", description: "Requires product-level transaction data." },
-  { title: "Geographic Performance", description: "Requires transaction/store/customer location data." },
-  { title: "Cross-brand Behavior", description: "Requires customer-level ecosystem data." },
-]
+export const QUALIFICATION_NOTE = "Attempted transactions that didn't clear this campaign's own rules — a prototype estimate of what a transaction/rules engine would report."

@@ -80,6 +80,8 @@ export default function CampaignAnalytics() {
     return { onlinePct: (perf.channelSplit.online.transactionValue / total) * 100, inStorePct: (perf.channelSplit.in_store.transactionValue / total) * 100 }
   }, [perf])
 
+  const hasChannelSplit = campaign?.channel === "both" && !!perf?.channelSplit?.online && !!perf?.channelSplit?.in_store
+
   const topMid = React.useMemo(() => {
     if (midStats.length === 0) return null
     const total = midStats.reduce((s, m) => s + m.gmv, 0)
@@ -207,14 +209,17 @@ export default function CampaignAnalytics() {
         </SectionCard>
       </section>
 
-      {/* 7. Merchant ID Qualification — high volume, low qualification? */}
-      {midStats.length > 1 && (
-        <section className="mt-12">
-          <SectionCard title="Merchant ID Qualification" description="Transaction volume vs. qualification rate — spot outliers worth investigating">
+      {/* 7 + 14. Merchant ID Qualification + Day/Time Performance — paired, both compact standalone visuals */}
+      <section className="mt-12 grid gap-6 lg:grid-cols-2">
+        {midStats.length > 1 && (
+          <SectionCard title="Merchant ID Qualification" description="Transaction volume vs. qualification rate">
             <MidQualificationScatter mids={midStats} />
           </SectionCard>
-        </section>
-      )}
+        )}
+        <SectionCard title="Day / Time Performance" description="GMV by day of week and time of day" className={midStats.length > 1 ? undefined : "lg:col-span-2"}>
+          <HeatmapGrid cells={heatmap} />
+        </SectionCard>
+      </section>
 
       {/* 8. Terminal Performance */}
       {terminalStats.length > 1 && (
@@ -234,18 +239,14 @@ export default function CampaignAnalytics() {
         </section>
       )}
 
-      {/* 10. Campaign Demographic Performance */}
-      {demographics && (
-        <section className="mt-12">
+      {/* 10 + 11. Demographic Performance + New vs. Returning — paired, both customer-segment views */}
+      <section className="mt-12 grid gap-6 lg:grid-cols-2">
+        {demographics && (
           <SectionCard title="Demographic Performance" description="Which age segment performs best">
             <DemographicPerformancePanel buckets={demographics.byAge} />
           </SectionCard>
-        </section>
-      )}
-
-      {/* 11. New vs. Returning */}
-      <section className="mt-12">
-        <SectionCard title="New vs. Returning" description="Acquisition vs. retention for this campaign">
+        )}
+        <SectionCard title="New vs. Returning" description="Acquisition vs. retention for this campaign" className={demographics ? undefined : "lg:col-span-2"}>
           <NewReturningPanel stats={newReturningStats} />
         </SectionCard>
       </section>
@@ -266,25 +267,14 @@ export default function CampaignAnalytics() {
         </section>
       )}
 
-      {/* 14. Day / Time Performance */}
-      <section className="mt-12">
-        <SectionCard title="Day / Time Performance" description="GMV by day of week and time of day">
-          <HeatmapGrid cells={heatmap} />
-        </SectionCard>
-      </section>
-
-      {/* 15. Channel Performance — only for campaigns targeting both channels */}
-      {campaign.channel === "both" && perf.channelSplit?.online && perf.channelSplit?.in_store && (
-        <section className="mt-12">
+      {/* 15 + 16. Channel Performance + Campaign Eligibility — paired */}
+      <section className="mt-12 grid gap-6 lg:grid-cols-2">
+        {hasChannelSplit && (
           <SectionCard title="Channel Performance" description="Online vs. in-store performance for this campaign">
             <ChannelBehaviourPanel stats={channelStats} metrics={["gmv", "transactions", "aov", "roi", "customers"]} />
           </SectionCard>
-        </section>
-      )}
-
-      {/* 16. Why Transactions Didn't Qualify */}
-      <section className="mt-12">
-        <SectionCard title="Campaign Eligibility" description="Attempted transactions that didn't receive cashback, and why">
+        )}
+        <SectionCard title="Campaign Eligibility" description="Attempted transactions that didn't receive cashback, and why" className={hasChannelSplit ? undefined : "lg:col-span-2"}>
           <QualificationBreakdown buckets={perf.qualification} qualified={perf.transactions} />
         </SectionCard>
       </section>

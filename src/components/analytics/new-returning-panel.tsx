@@ -14,15 +14,17 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
 
   return (
     <div>
-      <div className="grid gap-8 sm:grid-cols-2">
-        <DonutChart
-          segments={stats.map((s) => ({ label: s.segment, value: s.customers, color: SEGMENT_COLORS[s.segment] }))}
-          formatValue={formatNumber}
-          centerLabel="Customers"
-          centerValue={formatNumber(totalCustomers)}
-          size={160}
-        />
-        <div className="space-y-4">
+      <div className="flex flex-wrap items-start gap-8">
+        <div className="shrink-0">
+          <DonutChart
+            segments={stats.map((s) => ({ label: s.segment, value: s.customers, color: SEGMENT_COLORS[s.segment] }))}
+            formatValue={formatNumber}
+            centerLabel="Customers"
+            centerValue={formatNumber(totalCustomers)}
+            size={160}
+          />
+        </div>
+        <div className="min-w-[240px] flex-1 space-y-4">
           {stats.map((s) => {
             const avgSpend = s.customers > 0 ? s.gmv / s.customers : 0
             const avgTx = s.customers > 0 ? s.transactions / s.customers : 0

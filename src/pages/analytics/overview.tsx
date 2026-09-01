@@ -256,17 +256,13 @@ export default function AnalyticsOverview() {
             </Card>
           </section>
 
-          {/* 5. Budget Allocation — are brands' budgets sized in line with what they generate? */}
-          <section className="mt-12">
+          {/* 5 + 6. Budget Allocation + Channel Mix — paired, both compact donut-based composition views */}
+          <section className="mt-12 grid gap-6 lg:grid-cols-2">
             <SectionCard title="Budget Allocation" description="Cashback budget share vs. GMV share by brand">
               <BudgetAllocationPanel
                 items={brandStats.map(({ brand, perf }) => ({ name: brand.name, budget: perf.budget, gmv: perf.transactionValue, color: brand.logoColor }))}
               />
             </SectionCard>
-          </section>
-
-          {/* 6. Channel Mix — portfolio-wide online vs. in-store split */}
-          <section className="mt-12">
             <SectionCard
               title="Channel Mix"
               description="Online vs. in-store across the portfolio"

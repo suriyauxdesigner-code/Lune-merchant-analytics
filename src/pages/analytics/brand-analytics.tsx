@@ -249,10 +249,13 @@ export default function BrandAnalytics() {
             </SectionCard>
           </section>
 
-          {/* 6. Customer Value */}
-          <section className="mt-12">
+          {/* 6 + 8. Customer Value + Purchase Frequency — paired, both compact purchase-pattern views */}
+          <section className="mt-12 grid gap-6 lg:grid-cols-2">
             <SectionCard title="Customer Value" description="How much customers spend, in total, across all campaigns">
               <CustomerValuePanel buckets={valueBuckets} />
+            </SectionCard>
+            <SectionCard title="Purchase Frequency" description="How many times customers purchased">
+              <PurchaseFrequencyPanel buckets={freqBuckets} />
             </SectionCard>
           </section>
 
@@ -260,13 +263,6 @@ export default function BrandAnalytics() {
           <section className="mt-12">
             <SectionCard title="New vs. Returning Customers" description="Acquisition vs. retention, and how each segment's value compares">
               <NewReturningPanel stats={newReturningStats} />
-            </SectionCard>
-          </section>
-
-          {/* 8. Purchase Frequency */}
-          <section className="mt-12">
-            <SectionCard title="Purchase Frequency" description="How many times customers purchased">
-              <PurchaseFrequencyPanel buckets={freqBuckets} />
             </SectionCard>
           </section>
 
@@ -284,15 +280,11 @@ export default function BrandAnalytics() {
             </SectionCard>
           </section>
 
-          {/* 11. Channel Behaviour */}
-          <section className="mt-12">
+          {/* 11 + 12. Channel Behaviour + Why Transactions Didn't Qualify — paired */}
+          <section className="mt-12 grid gap-6 lg:grid-cols-2">
             <SectionCard title="Channel Behaviour" description="Online vs. in-store, compared">
               <ChannelBehaviourPanel stats={channelStats} metrics={["gmv", "customers", "aov", "repeatRate"]} />
             </SectionCard>
-          </section>
-
-          {/* 12. Why Transactions Didn't Qualify */}
-          <section className="mt-12">
             <SectionCard title="Why Transactions Didn't Qualify" description="Attempted transactions that didn't receive cashback, and why">
               <QualificationBreakdown buckets={cohortPerf.qualification} />
             </SectionCard>

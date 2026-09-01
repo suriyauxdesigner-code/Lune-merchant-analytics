@@ -5,7 +5,7 @@ import { KpiCard, KpiStrip } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
 import { FilterBar } from "@/components/analytics/filter-bar"
 import { PerformanceOverTimeChart, type ChartMode } from "@/components/analytics/performance-over-time-chart"
-import { BudgetCampaignHealth } from "@/components/analytics/budget-campaign-health"
+import { BudgetHealthPanel } from "@/components/analytics/budget-health-panel"
 import { PerformanceBreakdown } from "@/components/analytics/performance-breakdown"
 import { CustomerInsightsPreview } from "@/components/analytics/customer-insights-preview"
 import { BRANDS, CAMPAIGNS } from "@/lib/data"
@@ -63,17 +63,17 @@ export default function AnalyticsOverview() {
         </div>
       ) : (
         <>
-          {/* Level 2 — primary business KPIs */}
+          {/* Level 1 — how are we performing? */}
           <KpiStrip>
-            <KpiCard variant="plain" label="Transaction Value" value={formatAed(perf.transactionValue)} tier="transaction" />
-            <KpiCard variant="plain" label="Cashback Issued" value={formatAed(perf.cashbackIssued)} tier="transaction" />
-            <KpiCard variant="plain" label="Transactions" value={formatNumber(perf.transactions)} tier="transaction" />
-            <KpiCard variant="plain" label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} tier="transaction" />
-            <KpiCard variant="plain" label="Budget Utilization" value={formatPercent(perf.utilizationPct)} tier="transaction" />
-            <KpiCard variant="plain" label="Configured Budget" value={formatAed(totalBudget)} />
+            <KpiCard variant="plain" label="Transaction Value" value={formatAed(perf.transactionValue)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" label="Cashback Issued" value={formatAed(perf.cashbackIssued)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" size="md" label="Transactions" value={formatNumber(perf.transactions)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" size="md" label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" size="md" label="Budget Utilization" value={formatPercent(perf.utilizationPct)} tier="transaction" showTierBadge={false} />
+            <KpiCard variant="plain" size="md" label="Configured Budget" value={formatAed(totalBudget)} />
           </KpiStrip>
+          <p className="mt-2 text-xs text-muted-foreground">Transaction and cashback figures are prototype estimates — they require transaction/settlement data.</p>
 
-          {/* Level 3 — trend, the hero */}
           <section className="mt-12">
             <SectionHeading
               title="Performance Over Time"
@@ -98,23 +98,17 @@ export default function AnalyticsOverview() {
             <PerformanceOverTimeChart data={chartSeries} mode={chartMode} />
           </section>
 
-          {/* Level 4 — budget & campaign health */}
-          <section className="mt-12">
-            <SectionCard title="Budget & Campaign Health" description="Spend pace and which campaigns need a decision">
-              <BudgetCampaignHealth budget={totalBudget} perf={perf} statusCounts={statusCounts} onReviewStatus={reviewStatus} />
-            </SectionCard>
+          {/* Level 2 — are we healthy, and what's happening with customers? */}
+          <section className="mt-14 grid gap-6 lg:grid-cols-2 lg:items-start">
+            <BudgetHealthPanel budget={totalBudget} perf={perf} statusCounts={statusCounts} onReviewStatus={reviewStatus} />
+            <CustomerInsightsPreview perf={perf} />
           </section>
 
-          {/* Level 5 — breakdown */}
-          <section className="mt-12" ref={breakdownRef}>
+          {/* Level 3 — where is performance coming from? */}
+          <section className="mt-14" ref={breakdownRef}>
             <SectionCard title="Performance Breakdown" description="Compare performance across brands, channels and campaigns" contentClassName="px-5 pb-5">
               <PerformanceBreakdown campaigns={filteredCampaigns} />
             </SectionCard>
-          </section>
-
-          {/* Level 6 — future capability preview */}
-          <section className="mt-8">
-            <CustomerInsightsPreview perf={perf} />
           </section>
         </>
       )}

@@ -14,25 +14,39 @@ import { BudgetPacingPanel } from "@/components/analytics/budget-pacing-panel"
 import { EngagementFunnel } from "@/components/analytics/engagement-funnel"
 import { QualificationBreakdown } from "@/components/analytics/qualification-breakdown"
 import { OfferEconomicsPanel } from "@/components/analytics/offer-economics-panel"
-import { ChannelSplitTable } from "@/components/analytics/channel-split-table"
+import { ChannelBehaviourPanel } from "@/components/analytics/channel-behaviour-panel"
 import { PurchaseBehaviourPanel } from "@/components/analytics/purchase-behaviour-panel"
-import { DayOfWeekPanel } from "@/components/analytics/day-of-week-panel"
+import { HeatmapGrid } from "@/components/analytics/heatmap-grid"
+import { MidPerformancePanel } from "@/components/analytics/mid-performance-panel"
+import { MidQualificationScatter } from "@/components/analytics/mid-qualification-scatter"
+import { TerminalPerformancePanel } from "@/components/analytics/terminal-performance-panel"
+import { CustomerDemographicsPanel } from "@/components/analytics/customer-demographics-panel"
+import { DemographicPerformancePanel } from "@/components/analytics/demographic-performance-panel"
+import { NewReturningPanel } from "@/components/analytics/new-returning-panel"
 import { KeyInsights } from "@/components/analytics/key-insights"
 import { TransactionSection } from "@/components/analytics/transaction-section"
 import { campaignById, brandById } from "@/lib/data"
 import { formatAed, formatDate, formatNumber, formatPercent, formatRatio } from "@/lib/utils"
 import { durationLabel } from "@/lib/analytics-utils"
-import { getCampaignPerformance, bucketSeries, bucketByDayOfWeek, generateTransactionRows } from "@/lib/mock-performance"
-import { computeAmountStats, computeAmountDistribution, computeOfferEconomics } from "@/lib/transaction-stats"
+import {
+  getCampaignPerformance,
+  bucketSeries,
+  bucketByDayOfWeek,
+  buildDayTimeHeatmap,
+  generateTransactionRows,
+  aggregateDemographics,
+  getNewReturningStats,
+} from "@/lib/mock-performance"
+import { computeAmountStats, computeAmountDistribution, computeOfferEconomics, computeMidStats, computeTerminalStats, computeChannelBehavior } from "@/lib/transaction-stats"
 import { generateCampaignInsights } from "@/lib/insights"
 
 const CAMPAIGN_CHART_METRICS: ChartMetric[] = ["gmv", "transactions", "cashback", "roi", "aov"]
 
 /**
- * Campaign Analytics — "Is this campaign working, why, and what should I change?" One level
- * below Brand: everything here is scoped to a single campaign. Deliberately does not repeat
- * brand-wide campaign tables or portfolio comparisons — this page is about optimizing one
- * campaign's configuration and spend.
+ * Campaign Analytics — "Is this campaign working, why, and what should I change?" Campaign +
+ * operational intelligence: the deepest, most granular level. Everything here is scoped to a
+ * single campaign, down to its Merchant IDs and terminals — questions that don't make sense one
+ * or two levels up, where "which campaign" hasn't been answered yet.
  */
 export default function CampaignAnalytics() {
   const { campaignId = "" } = useParams()
@@ -49,9 +63,15 @@ export default function CampaignAnalytics() {
   }, [perf])
   const transactionRows = React.useMemo(() => (campaign ? generateTransactionRows([campaign]) : []), [campaign])
   const weekday = React.useMemo(() => (perf ? bucketByDayOfWeek(perf.dailySeries) : []), [perf])
+  const heatmap = React.useMemo(() => (perf ? buildDayTimeHeatmap(perf.dailySeries) : []), [perf])
   const amountStats = React.useMemo(() => computeAmountStats(transactionRows), [transactionRows])
   const amountDistribution = React.useMemo(() => computeAmountDistribution(transactionRows), [transactionRows])
   const offerEconomics = React.useMemo(() => (campaign ? computeOfferEconomics(transactionRows, campaign) : null), [transactionRows, campaign])
+  const midStats = React.useMemo(() => (campaign ? computeMidStats(transactionRows, campaign.brandId) : []), [transactionRows, campaign])
+  const terminalStats = React.useMemo(() => computeTerminalStats(transactionRows), [transactionRows])
+  const channelStats = React.useMemo(() => computeChannelBehavior(transactionRows), [transactionRows])
+  const demographics = React.useMemo(() => (campaign ? aggregateDemographics([campaign]) : null), [campaign])
+  const newReturningStats = React.useMemo(() => (campaign ? getNewReturningStats([campaign]) : []), [campaign])
 
   const channelMix = React.useMemo(() => {
     if (!perf?.channelSplit?.online || !perf.channelSplit.in_store) return null
@@ -59,6 +79,19 @@ export default function CampaignAnalytics() {
     if (total === 0) return null
     return { onlinePct: (perf.channelSplit.online.transactionValue / total) * 100, inStorePct: (perf.channelSplit.in_store.transactionValue / total) * 100 }
   }, [perf])
+
+  const topMid = React.useMemo(() => {
+    if (midStats.length === 0) return null
+    const total = midStats.reduce((s, m) => s + m.gmv, 0)
+    return total > 0 ? { mid: midStats[0].mid, gmvSharePct: (midStats[0].gmv / total) * 100 } : null
+  }, [midStats])
+
+  const topAgeSegment = React.useMemo(() => {
+    if (!demographics) return null
+    const total = demographics.totalGmv
+    const top = [...demographics.byAge].filter((b) => b.customers > 0).sort((a, b) => b.gmv - a.gmv)[0]
+    return top && total > 0 ? { ageBand: top.ageBand, gmvSharePct: (top.gmv / total) * 100 } : null
+  }, [demographics])
 
   const insights = React.useMemo(() => {
     if (!perf) return []
@@ -70,8 +103,10 @@ export default function CampaignAnalytics() {
       utilizationPct: perf.utilizationPct,
       estimatedExhaustionDate: perf.estimatedExhaustionDate,
       weekday,
+      topMid,
+      topAgeSegment,
     })
-  }, [perf, channelMix, weekday])
+  }, [perf, channelMix, weekday, topMid, topAgeSegment])
 
   if (!campaign || !brand || !perf) {
     return <EmptyState icon={<MegaphoneIcon className="size-6" />} title="Campaign not found" description="This campaign doesn't exist in the sample dataset." />
@@ -137,6 +172,7 @@ export default function CampaignAnalytics() {
       <section className="mt-12">
         <SectionCard title="Budget Pacing" description="Burn rate and forecast exhaustion for this campaign">
           <BudgetPacingPanel
+            budget={campaign.budget}
             remainingBudget={perf.remainingBudget}
             utilizationPct={perf.utilizationPct}
             burnRatePerDay={perf.burnRatePerDay}
@@ -164,14 +200,64 @@ export default function CampaignAnalytics() {
         </SectionCard>
       </section>
 
-      {/* 6. Campaign Eligibility / Failed Transactions */}
+      {/* 6. Top Merchant IDs */}
       <section className="mt-12">
-        <SectionCard title="Campaign Eligibility" description="Attempted transactions that didn't receive cashback, and why">
-          <QualificationBreakdown buckets={perf.qualification} qualified={perf.transactions} />
+        <SectionCard title="Top Merchant IDs" description="Merchant IDs contributing to this campaign">
+          <MidPerformancePanel mids={midStats} />
         </SectionCard>
       </section>
 
-      {/* 7. Offer Economics — is the offer configuration itself working? */}
+      {/* 7. Merchant ID Qualification — high volume, low qualification? */}
+      {midStats.length > 1 && (
+        <section className="mt-12">
+          <SectionCard title="Merchant ID Qualification" description="Transaction volume vs. qualification rate — spot outliers worth investigating">
+            <MidQualificationScatter mids={midStats} />
+          </SectionCard>
+        </section>
+      )}
+
+      {/* 8. Terminal Performance */}
+      {terminalStats.length > 1 && (
+        <section className="mt-12">
+          <SectionCard title="Terminal Performance" description="Terminal IDs under this campaign's Merchant IDs">
+            <TerminalPerformancePanel terminals={terminalStats} />
+          </SectionCard>
+        </section>
+      )}
+
+      {/* 9. Campaign Customer Demographics — who responded? */}
+      {demographics && (
+        <section className="mt-12">
+          <SectionCard title="Campaign Customer Demographics" description="Who responded to this campaign">
+            <CustomerDemographicsPanel demographics={demographics} compact />
+          </SectionCard>
+        </section>
+      )}
+
+      {/* 10. Campaign Demographic Performance */}
+      {demographics && (
+        <section className="mt-12">
+          <SectionCard title="Demographic Performance" description="Which age segment performs best">
+            <DemographicPerformancePanel buckets={demographics.byAge} />
+          </SectionCard>
+        </section>
+      )}
+
+      {/* 11. New vs. Returning */}
+      <section className="mt-12">
+        <SectionCard title="New vs. Returning" description="Acquisition vs. retention for this campaign">
+          <NewReturningPanel stats={newReturningStats} />
+        </SectionCard>
+      </section>
+
+      {/* 12. Purchase Behaviour */}
+      <section className="mt-12">
+        <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction">
+          <PurchaseBehaviourPanel stats={amountStats} distribution={amountDistribution} />
+        </SectionCard>
+      </section>
+
+      {/* 13. Offer Economics — is the offer configuration itself working? */}
       {offerEconomics && (
         <section className="mt-12">
           <SectionCard title="Offer Economics" description="How the offer configuration is playing out in real behavior">
@@ -180,30 +266,30 @@ export default function CampaignAnalytics() {
         </section>
       )}
 
-      {/* 8. Channel Performance — only for campaigns targeting both channels */}
+      {/* 14. Day / Time Performance */}
+      <section className="mt-12">
+        <SectionCard title="Day / Time Performance" description="GMV by day of week and time of day">
+          <HeatmapGrid cells={heatmap} />
+        </SectionCard>
+      </section>
+
+      {/* 15. Channel Performance — only for campaigns targeting both channels */}
       {campaign.channel === "both" && perf.channelSplit?.online && perf.channelSplit?.in_store && (
         <section className="mt-12">
           <SectionCard title="Channel Performance" description="Online vs. in-store performance for this campaign">
-            <ChannelSplitTable online={perf.channelSplit.online} inStore={perf.channelSplit.in_store} />
+            <ChannelBehaviourPanel stats={channelStats} metrics={["gmv", "transactions", "aov", "roi", "customers"]} />
           </SectionCard>
         </section>
       )}
 
-      {/* 9. Purchase Behaviour */}
+      {/* 16. Why Transactions Didn't Qualify */}
       <section className="mt-12">
-        <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction">
-          <PurchaseBehaviourPanel stats={amountStats} distribution={amountDistribution} />
+        <SectionCard title="Campaign Eligibility" description="Attempted transactions that didn't receive cashback, and why">
+          <QualificationBreakdown buckets={perf.qualification} qualified={perf.transactions} />
         </SectionCard>
       </section>
 
-      {/* 10. Time / Day Performance */}
-      <section className="mt-12">
-        <SectionCard title="Time / Day Performance" description="GMV by day of week">
-          <DayOfWeekPanel weekday={weekday} />
-        </SectionCard>
-      </section>
-
-      {/* 11. Campaign Insights */}
+      {/* 17. Campaign Insights */}
       {insights.length > 0 && (
         <section className="mt-12">
           <SectionCard title="Campaign Insights" description="Data-driven takeaways for this campaign">
@@ -212,7 +298,7 @@ export default function CampaignAnalytics() {
         </section>
       )}
 
-      {/* 12. Transactions */}
+      {/* 18. Transactions */}
       <section className="mt-12">
         <SectionCard title="Transactions" description="Individual transactions behind the numbers above" contentClassName="px-5 pb-5">
           <TransactionSection rows={transactionRows} showCampaign={false} />

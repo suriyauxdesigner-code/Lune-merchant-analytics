@@ -76,6 +76,14 @@ export const BRANDS: Brand[] = [
         terminals: [
           { id: "tid-tryano-1", terminalId: "TID-11002", channel: "in_store", terminalName: "Mall of the Emirates" },
           { id: "tid-tryano-2", terminalId: "TID-11003", channel: "online", terminalName: "tryano.ae checkout" },
+        ],
+      },
+      {
+        id: "mid-tryano-2",
+        merchantId: "MID-5521-0087",
+        acquirer: "Network International",
+        channel: "in_store",
+        terminals: [
           { id: "tid-tryano-3", terminalId: "TID-11004", channel: "in_store", terminalName: "Dubai Mall" },
           { id: "tid-tryano-4", terminalId: "TID-11005", channel: "in_store", terminalName: "City Centre Deira" },
         ],
@@ -99,6 +107,14 @@ export const BRANDS: Brand[] = [
         terminals: [
           { id: "tid-tanagra-1", terminalId: "TID-20911", channel: "in_store", terminalName: "City Centre Deira" },
           { id: "tid-tanagra-2", terminalId: "TID-20912", channel: "online", terminalName: "tanagra.ae checkout" },
+        ],
+      },
+      {
+        id: "mid-tanagra-2",
+        merchantId: "MID-3390-8825",
+        acquirer: "Checkout.com",
+        channel: "in_store",
+        terminals: [
           { id: "tid-tanagra-3", terminalId: "TID-20913", channel: "in_store", terminalName: "Yas Mall, Abu Dhabi" },
           { id: "tid-tanagra-4", terminalId: "TID-20914", channel: "in_store", terminalName: "Sharjah City Centre" },
         ],
@@ -122,6 +138,14 @@ export const BRANDS: Brand[] = [
         terminals: [
           { id: "tid-level-1", terminalId: "TID-30221", channel: "in_store", terminalName: "Dubai Mall" },
           { id: "tid-level-2", terminalId: "TID-30222", channel: "online", terminalName: "levelshoes.ae checkout" },
+        ],
+      },
+      {
+        id: "mid-level-2",
+        merchantId: "MID-6640-2249",
+        acquirer: "Stripe",
+        channel: "in_store",
+        terminals: [
           { id: "tid-level-3", terminalId: "TID-30223", channel: "in_store", terminalName: "Mall of the Emirates" },
           { id: "tid-level-4", terminalId: "TID-30224", channel: "in_store", terminalName: "Yas Mall, Abu Dhabi" },
         ],
@@ -850,4 +874,21 @@ export function terminalsForBrand(brandId: string, channel?: "online" | "in_stor
   if (!brand) return []
   const terminals = brand.merchantIds.flatMap((m) => m.terminals)
   return channel ? terminals.filter((t) => t.channel === channel) : terminals
+}
+
+export type MidTerminal = { terminalName: string; mid: string; acquirer: string; channel: "online" | "in_store" }
+
+/** Every terminal registered to a brand, annotated with the Merchant ID that owns it — the basis for MID-level performance rollups. */
+export function midTerminalsForBrand(brandId: string, channel?: "online" | "in_store"): MidTerminal[] {
+  const brand = brandById(brandId)
+  if (!brand) return []
+  const rows = brand.merchantIds.flatMap((m) =>
+    m.terminals.map((t) => ({ terminalName: t.terminalName, mid: m.merchantId, acquirer: m.acquirer, channel: t.channel }))
+  )
+  return channel ? rows.filter((r) => r.channel === channel) : rows
+}
+
+/** Every Merchant ID registered to a brand. */
+export function merchantIdsForBrand(brandId: string) {
+  return brandById(brandId)?.merchantIds ?? []
 }

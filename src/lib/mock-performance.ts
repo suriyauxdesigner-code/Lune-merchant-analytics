@@ -1,6 +1,6 @@
 import type { Campaign, Channel } from "./types"
 import { NOW, type DateRange } from "./analytics-utils"
-import { terminalsForBrand } from "./data"
+import { midTerminalsForBrand } from "./data"
 
 // ---------------------------------------------------------------------------
 // Prototype performance data.
@@ -43,7 +43,8 @@ function hash(str: string, salt: number): number {
   return ((h >>> 0) % 100000) / 100000
 }
 
-function seeded(id: string, salt: number, min: number, max: number): number {
+/** Deterministic pseudo-random number in [min, max), seeded by an id + a salt so different "questions" about the same id don't correlate. Exported for reuse by other prototype-data helpers (e.g. MID qualification rates). */
+export function seeded(id: string, salt: number, min: number, max: number): number {
   return min + hash(id, salt) * (max - min)
 }
 
@@ -153,9 +154,10 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
   const id = campaign.id
 
   // A campaign that never went live has no performance yet — that's a real
-  // zero, not a missing/locked value.
+  // zero, not a missing/locked value. Remaining budget is the one exception: nothing has been
+  // spent, so the full allocation is still remaining, not zero.
   if (!campaign.activatedAt) {
-    return { hasStarted: false, ...ZERO_PERF }
+    return { hasStarted: false, ...ZERO_PERF, remainingBudget: campaign.budget }
   }
 
   const activatedAt = new Date(campaign.activatedAt)
@@ -193,11 +195,13 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
   const transactionToCashbackRate = seeded(id, 7, 0.92, 0.99)
   const cashbackIssuedCount = Math.round(transactions * transactionToCashbackRate)
 
-  // Customers
+  // Customers — new/returning are derived from the same per-customer purchase distribution used
+  // for demographics and purchase-frequency charts, so every widget agrees on the same split.
   const customersReached = Math.round(offerShown * seeded(id, 8, 0.55, 0.75))
-  const customersTransacted = Math.round(transactions * seeded(id, 9, 0.85, 0.97))
-  const returningCustomers = Math.round(customersTransacted * seeded(id, 10, 0.3, 0.55))
-  const newCustomers = customersTransacted - returningCustomers
+  const customersTransacted = Math.round(transactions * seeded(id, 9, 0.62, 0.82))
+  const purchaseDist = distributePurchases(id, transactions, customersTransacted)
+  const newCustomers = purchaseDist.filter((p) => p === 1).length
+  const returningCustomers = customersTransacted - newCustomers
   const repeatPurchaseRate = customersTransacted > 0 ? returningCustomers / customersTransacted : 0
 
   // Qualification — attempted transactions that didn't clear the campaign's own rules
@@ -554,6 +558,213 @@ export function bucketByDayOfWeek(daily: DailyPoint[]): WeekdayPoint[] {
   return totals
 }
 
+// --- day + time heatmap --------------------------------------------------
+
+export type HeatCell = { day: string; shortDay: string; block: string; value: number }
+
+/** A typical UAE retail traffic curve — evening-weighted — applied to each day's real total to split it into time blocks. Not measured hourly data (Pulse doesn't have it); a deterministic, clearly-modeled shape. */
+const TIME_BLOCKS: { label: string; weight: number }[] = [
+  { label: "6–9am", weight: 0.4 },
+  { label: "9am–12pm", weight: 0.8 },
+  { label: "12–3pm", weight: 1.0 },
+  { label: "3–6pm", weight: 1.0 },
+  { label: "6–9pm", weight: 1.7 },
+  { label: "9pm–12am", weight: 0.8 },
+]
+
+/** Splits each weekday's real GMV total into time-of-day blocks using a modeled retail traffic shape. */
+export function buildDayTimeHeatmap(daily: DailyPoint[]): HeatCell[] {
+  const dayTotals = bucketByDayOfWeek(daily)
+  const weightSum = TIME_BLOCKS.reduce((s, b) => s + b.weight, 0)
+  const cells: HeatCell[] = []
+  for (const day of dayTotals) {
+    for (const block of TIME_BLOCKS) {
+      const jitter = seeded(`${day.day}-${block.label}`, 70, 0.85, 1.15)
+      cells.push({ day: day.day, shortDay: day.shortDay, block: block.label, value: day.transactionValue * (block.weight / weightSum) * jitter })
+    }
+  }
+  return cells
+}
+
+// --- customer demographics -------------------------------------------------
+//
+// Pulse doesn't capture customer identity or demographics today. Everything
+// below is a deterministic model seeded from each campaign's own id + a
+// synthetic per-customer index — internally consistent (a brand's totals
+// always foot to the sum of its campaigns) but explicitly a prototype
+// estimate, not measured data.
+// ---------------------------------------------------------------------------
+
+export type AgeBand = "18-24" | "25-34" | "35-44" | "45-54" | "55+"
+export type Gender = "Female" | "Male"
+
+const AGE_BAND_WEIGHTS: [AgeBand, number][] = [
+  ["18-24", 0.15],
+  ["25-34", 0.32],
+  ["35-44", 0.28],
+  ["45-54", 0.16],
+  ["55+", 0.09],
+]
+
+export const AGE_BANDS: AgeBand[] = AGE_BAND_WEIGHTS.map(([band]) => band)
+
+/** Splits `total` purchases across `customers` people so counts sum exactly to `total` — most customers buy once, a smaller share buys repeatedly. */
+function distributePurchases(seedId: string, total: number, customers: number): number[] {
+  if (customers <= 0) return []
+  const counts = new Array(customers).fill(1)
+  let remaining = total - customers
+  let idx = 0
+  while (remaining > 0) {
+    const give = Math.min(remaining, 1 + Math.floor(seeded(`${seedId}-extra-${idx}`, 61, 0, 3)))
+    counts[idx % customers] += give
+    remaining -= give
+    idx++
+  }
+  return counts
+}
+
+const purchaseDistCache = new Map<string, number[]>()
+
+/** The per-customer purchase count for a campaign — same distribution `newCustomers`/`returningCustomers` were derived from. */
+export function getPurchaseDistribution(campaign: Campaign): number[] {
+  const cached = purchaseDistCache.get(campaign.id)
+  if (cached) return cached
+  const perf = getCampaignPerformance(campaign)
+  const dist = perf.hasStarted ? distributePurchases(campaign.id, perf.transactions, perf.customersTransacted) : []
+  purchaseDistCache.set(campaign.id, dist)
+  return dist
+}
+
+function customerProfile(customerId: string): { ageBand: AgeBand; gender: Gender } {
+  const roll = hash(customerId, 50)
+  let cursor = 0
+  let ageBand: AgeBand = AGE_BAND_WEIGHTS[AGE_BAND_WEIGHTS.length - 1][0]
+  for (const [band, weight] of AGE_BAND_WEIGHTS) {
+    cursor += weight
+    if (roll < cursor) {
+      ageBand = band
+      break
+    }
+  }
+  const gender: Gender = seeded(customerId, 51, 0, 1) < 0.58 ? "Female" : "Male"
+  return { ageBand, gender }
+}
+
+/** A modeled per-customer lifetime value for this campaign — purchase count × AOV × a seeded spread, since Pulse doesn't track per-customer spend. */
+function customerValue(customerId: string, purchases: number, avgTransactionValue: number): number {
+  return purchases * avgTransactionValue * seeded(customerId, 52, 0.7, 1.35)
+}
+
+export type AgeBucket = { ageBand: AgeBand; customers: number; gmv: number; transactions: number }
+export type GenderBucket = { gender: Gender; customers: number; gmv: number; transactions: number }
+export type CustomerDemographics = { byAge: AgeBucket[]; byGender: GenderBucket[]; totalCustomers: number; totalGmv: number }
+
+/** Age/gender breakdown for a set of campaigns — sums per-campaign demographics so a brand's totals foot to the sum of its campaigns. */
+export function aggregateDemographics(campaigns: Campaign[]): CustomerDemographics {
+  const byAge = new Map<AgeBand, AgeBucket>(AGE_BANDS.map((b) => [b, { ageBand: b, customers: 0, gmv: 0, transactions: 0 }]))
+  const byGender = new Map<Gender, GenderBucket>([
+    ["Female", { gender: "Female", customers: 0, gmv: 0, transactions: 0 }],
+    ["Male", { gender: "Male", customers: 0, gmv: 0, transactions: 0 }],
+  ])
+  let totalCustomers = 0
+  let totalGmv = 0
+
+  for (const campaign of campaigns) {
+    const perf = getCampaignPerformance(campaign)
+    if (!perf.hasStarted) continue
+    const dist = getPurchaseDistribution(campaign)
+    dist.forEach((purchases, i) => {
+      const customerId = `${campaign.id}-cust-${i}`
+      const { ageBand, gender } = customerProfile(customerId)
+      const value = customerValue(customerId, purchases, perf.avgTransactionValue)
+      const ageBucket = byAge.get(ageBand)!
+      ageBucket.customers += 1
+      ageBucket.gmv += value
+      ageBucket.transactions += purchases
+      const genderBucket = byGender.get(gender)!
+      genderBucket.customers += 1
+      genderBucket.gmv += value
+      genderBucket.transactions += purchases
+      totalCustomers += 1
+      totalGmv += value
+    })
+  }
+
+  return { byAge: [...byAge.values()], byGender: [...byGender.values()], totalCustomers, totalGmv }
+}
+
+export type FrequencyBucket = { label: string; customers: number }
+
+/** How many times each customer purchased — 1 / 2 / 3 / 4+ — across a set of campaigns. */
+export function getPurchaseFrequency(campaigns: Campaign[]): FrequencyBucket[] {
+  const buckets = { 1: 0, 2: 0, 3: 0, 4: 0 }
+  for (const campaign of campaigns) {
+    const perf = getCampaignPerformance(campaign)
+    if (!perf.hasStarted) continue
+    for (const p of getPurchaseDistribution(campaign)) {
+      if (p >= 4) buckets[4]++
+      else buckets[p as 1 | 2 | 3]++
+    }
+  }
+  return [
+    { label: "1 purchase", customers: buckets[1] },
+    { label: "2 purchases", customers: buckets[2] },
+    { label: "3 purchases", customers: buckets[3] },
+    { label: "4+ purchases", customers: buckets[4] },
+  ]
+}
+
+export type ValueBucket = { label: string; customers: number; gmv: number }
+
+const VALUE_BANDS: { label: string; max: number }[] = [
+  { label: "< AED 100", max: 100 },
+  { label: "AED 100–250", max: 250 },
+  { label: "AED 250–500", max: 500 },
+  { label: "AED 500–1,000", max: 1000 },
+  { label: "AED 1,000+", max: Infinity },
+]
+
+/** How much each customer spent in total across a set of campaigns, bucketed into spend bands. */
+export function getCustomerValueDistribution(campaigns: Campaign[]): ValueBucket[] {
+  const buckets = VALUE_BANDS.map((b) => ({ label: b.label, customers: 0, gmv: 0 }))
+  for (const campaign of campaigns) {
+    const perf = getCampaignPerformance(campaign)
+    if (!perf.hasStarted) continue
+    getPurchaseDistribution(campaign).forEach((purchases, i) => {
+      const customerId = `${campaign.id}-cust-${i}`
+      const value = customerValue(customerId, purchases, perf.avgTransactionValue)
+      const idx = VALUE_BANDS.findIndex((b) => value <= b.max)
+      const bucket = buckets[idx === -1 ? buckets.length - 1 : idx]
+      bucket.customers += 1
+      bucket.gmv += value
+    })
+  }
+  return buckets
+}
+
+export type NewReturningStat = { segment: "New" | "Returning"; customers: number; gmv: number; transactions: number }
+
+/** New (single-purchase) vs. returning (2+ purchase) customers across a set of campaigns, with their GMV and transaction contribution. */
+export function getNewReturningStats(campaigns: Campaign[]): NewReturningStat[] {
+  const stats: Record<"New" | "Returning", NewReturningStat> = {
+    New: { segment: "New", customers: 0, gmv: 0, transactions: 0 },
+    Returning: { segment: "Returning", customers: 0, gmv: 0, transactions: 0 },
+  }
+  for (const campaign of campaigns) {
+    const perf = getCampaignPerformance(campaign)
+    if (!perf.hasStarted) continue
+    getPurchaseDistribution(campaign).forEach((purchases, i) => {
+      const customerId = `${campaign.id}-cust-${i}`
+      const value = customerValue(customerId, purchases, perf.avgTransactionValue)
+      const bucket = purchases === 1 ? stats.New : stats.Returning
+      bucket.customers += 1
+      bucket.gmv += value
+      bucket.transactions += purchases
+    })
+  }
+  return [stats.New, stats.Returning]
+}
+
 // --- transaction log --------------------------------------------------------
 
 const TERMINAL_POOL = ["Dubai Mall", "Mall of the Emirates", "Yas Mall, Abu Dhabi", "City Centre Deira", "Sharjah City Centre", "Abu Dhabi Corniche"]
@@ -567,9 +778,36 @@ export type TransactionRow = {
   cashback: number
   channel: "online" | "in_store"
   terminalName: string
+  /** Merchant ID that processed this transaction — null only if the brand has no registered MID for this channel. */
+  mid: string | null
   status: "Rewarded" | "Pending settlement"
+  /** Stable per-customer key — same value across all of a returning customer's rows. Used to count unique customers accurately; not shown in the UI. */
+  customerId: string
   /** Masked customer reference for display in transaction logs — not a real identifier. */
   customerRef: string
+  ageBand: AgeBand
+  gender: Gender
+}
+
+function seededShuffle<T>(arr: T[], seedId: string): T[] {
+  const copy = [...arr]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(seeded(`${seedId}-shuffle-${i}`, 62, 0, i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+const customerSequenceCache = new Map<string, string[]>()
+
+/** The customer behind each of a campaign's transactions, in generation order — spread via a seeded shuffle so a repeat customer's purchases land on different days rather than clustering. */
+function getCustomerSequence(campaign: Campaign): string[] {
+  const cached = customerSequenceCache.get(campaign.id)
+  if (cached) return cached
+  const flat = getPurchaseDistribution(campaign).flatMap((count, i) => Array(count).fill(`${campaign.id}-cust-${i}`))
+  const sequence = seededShuffle(flat, campaign.id)
+  customerSequenceCache.set(campaign.id, sequence)
+  return sequence
 }
 
 /** Individual transaction rows for the Transaction Log — expanded from each campaign's daily series so counts always foot to the Transactions KPI. */
@@ -588,11 +826,14 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
     const lastActiveIndex = [...perf.dailySeries].map((d) => d.transactions).lastIndexOf(Math.max(...perf.dailySeries.map((d) => d.transactions)))
     const adjustedDays = perf.dailySeries.map((d, i) => (i === lastActiveIndex ? { ...d, transactions: Math.max(0, d.transactions + drift) } : d))
 
-    // Route in-store rows through this brand's own registered terminals so Location Performance
-    // reflects the merchant's real terminal configuration, not a generic citywide pool.
-    const brandInStoreTerminals = terminalsForBrand(campaign.brandId, "in_store").map((t) => t.terminalName)
-    const brandOnlineTerminal = terminalsForBrand(campaign.brandId, "online")[0]?.terminalName ?? `${campaign.brandId}.ae checkout`
-    const inStorePool = brandInStoreTerminals.length > 0 ? brandInStoreTerminals : TERMINAL_POOL
+    // Route rows through this brand's own registered MIDs/terminals so Location and Merchant ID
+    // performance reflect the merchant's real terminal configuration, not a generic pool.
+    const inStoreMids = midTerminalsForBrand(campaign.brandId, "in_store")
+    const onlineMids = midTerminalsForBrand(campaign.brandId, "online")
+    const fallbackTerminal = { terminalName: `${campaign.brandId}.ae checkout`, mid: null as string | null }
+
+    const customerSequence = getCustomerSequence(campaign)
+    let customerCursor = 0
 
     for (const day of adjustedDays) {
       for (let i = 0; i < day.transactions; i++) {
@@ -601,9 +842,15 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
         const cashback = Math.min(campaign.cashbackCap, Math.round((amount * campaign.cashbackPercentage) / 100))
         const channel: "online" | "in_store" =
           campaign.channel === "both" ? (seeded(rowSeed, 31, 0, 1) < 0.5 ? "online" : "in_store") : campaign.channel
-        const terminalName = channel === "online" ? brandOnlineTerminal : inStorePool[Math.floor(seeded(rowSeed, 32, 0, inStorePool.length))]
+        const pool = channel === "online" ? onlineMids : inStoreMids
+        const picked = pool.length > 0 ? pool[Math.floor(seeded(rowSeed, 32, 0, pool.length))] : { terminalName: TERMINAL_POOL[Math.floor(seeded(rowSeed, 32, 0, TERMINAL_POOL.length))], mid: null }
+        const { terminalName, mid } = channel === "online" && pool.length === 0 ? fallbackTerminal : picked
         const status = seeded(rowSeed, 33, 0, 1) < 0.04 ? "Pending settlement" : "Rewarded"
-        const customerRef = `CUST-${Math.floor(seeded(rowSeed, 34, 1000, 9999))}`
+
+        const customerId = customerSequence[customerCursor] ?? `${campaign.id}-cust-${customerCursor}`
+        customerCursor++
+        const { ageBand, gender } = customerProfile(customerId)
+        const customerRef = `CUST-${(hash(customerId, 34) * 8999 + 1000).toFixed(0)}`
 
         rows.push({
           id: rowSeed,
@@ -614,8 +861,12 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
           cashback,
           channel,
           terminalName,
+          mid,
           status,
+          customerId,
           customerRef,
+          ageBand,
+          gender,
         })
       }
     }

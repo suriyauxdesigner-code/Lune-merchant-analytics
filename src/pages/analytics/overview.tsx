@@ -1,6 +1,5 @@
 import * as React from "react"
 import { PageHeader } from "@/components/shared/page-header"
-import { SectionHeading } from "@/components/shared/section-heading"
 import { KpiCard, KpiStrip } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
 import { FilterBar } from "@/components/analytics/filter-bar"
@@ -75,9 +74,10 @@ export default function AnalyticsOverview() {
           <p className="mt-2 text-xs text-muted-foreground">Transaction and cashback figures are prototype estimates — they require transaction/settlement data.</p>
 
           <section className="mt-12">
-            <SectionHeading
+            <SectionCard
               title="Performance Over Time"
               description="Is performance improving or declining?"
+              contentClassName="pt-2"
               actions={
                 <div className="inline-flex items-center gap-1 rounded-full bg-muted p-1">
                   {(["value", "transactions"] as ChartMode[]).map((m) => (
@@ -94,12 +94,13 @@ export default function AnalyticsOverview() {
                   ))}
                 </div>
               }
-            />
-            <PerformanceOverTimeChart data={chartSeries} mode={chartMode} />
+            >
+              <PerformanceOverTimeChart data={chartSeries} mode={chartMode} />
+            </SectionCard>
           </section>
 
           {/* Level 2 — are we healthy, and what's happening with customers? */}
-          <section className="mt-14 grid gap-6 lg:grid-cols-2 lg:items-start">
+          <section className="mt-14 grid gap-6 lg:grid-cols-2">
             <BudgetHealthPanel budget={totalBudget} perf={perf} statusCounts={statusCounts} onReviewStatus={reviewStatus} />
             <CustomerInsightsPreview perf={perf} />
           </section>

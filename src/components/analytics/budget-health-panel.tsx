@@ -22,7 +22,7 @@ export function BudgetHealthPanel({
   const needsAttention = candidates.filter((s) => s.count > 0)
 
   return (
-    <div className="rounded-[var(--radius)] border border-border bg-card p-6">
+    <div className="h-full rounded-[var(--radius)] border border-border bg-card p-6">
       <p className="text-sm font-semibold text-foreground">Budget Health</p>
 
       <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">

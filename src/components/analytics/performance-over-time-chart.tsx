@@ -18,20 +18,20 @@ export function PerformanceOverTimeChart({ data, mode = "value" }: { data: Serie
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-4">
+      <div className="mb-5 flex flex-wrap items-center gap-5 border-b border-border/70 pb-4">
         {series.map((s) => (
-          <div key={s.key} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <div key={s.key} className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <span className="size-2 rounded-full" style={{ backgroundColor: s.color }} />
             {s.label}
           </div>
         ))}
       </div>
-      <div className="h-[260px] w-full">
+      <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+          <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke="hsl(220 16% 93%)" />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "hsl(220 9% 46%)" }} minTickGap={24} />
-            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "hsl(220 9% 46%)" }} width={48} tickFormatter={(v) => formatTick(v)} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} tick={{ fontSize: 12, fill: "hsl(220 9% 46%)" }} minTickGap={24} />
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: "hsl(220 9% 46%)" }} width={52} tickFormatter={(v) => formatTick(v)} />
             <Tooltip
               formatter={(value: number, name: string) => [formatTooltip(value), name]}
               contentStyle={{

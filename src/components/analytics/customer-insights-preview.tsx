@@ -16,14 +16,10 @@ const FUNNEL_STEPS: { key: keyof Perf; label: string }[] = [
   { key: "cashbackIssuedCount", label: "Rewarded" },
 ]
 
-/** A deliberately compact, lightweight preview — these metrics require SDK/customer instrumentation Pulse doesn't have yet. */
 export function CustomerInsightsPreview({ perf }: { perf: Perf }) {
   return (
-    <div className="rounded-[var(--radius)] bg-muted/40 p-5 sm:p-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold text-foreground">Customer Insights</h3>
-        <span className="rounded-full bg-card border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Coming soon</span>
-      </div>
+    <div className="h-full rounded-[var(--radius)] border border-border bg-card p-6">
+      <p className="text-sm font-semibold text-foreground">Customer Insights</p>
       <p className="mt-1 max-w-xl text-xs text-muted-foreground">
         Understand reach, acquisition and repeat purchase behavior once customer-level transaction data is available.
       </p>
@@ -32,7 +28,7 @@ export function CustomerInsightsPreview({ perf }: { perf: Perf }) {
       <div className="mt-4 flex flex-wrap items-center gap-x-1.5 gap-y-2">
         {FUNNEL_STEPS.map((step, i) => (
           <div key={step.key} className="flex items-center gap-1.5">
-            <div className="rounded-[var(--radius-sm)] bg-card px-2.5 py-1.5">
+            <div className="rounded-[var(--radius-sm)] bg-muted px-2.5 py-1.5">
               <span className="text-sm font-semibold text-foreground">{formatNumber(perf[step.key])}</span>
               <span className="ml-1.5 text-[11px] text-muted-foreground">{step.label}</span>
             </div>
@@ -42,7 +38,7 @@ export function CustomerInsightsPreview({ perf }: { perf: Perf }) {
       </div>
 
       {/* Supporting customer stats */}
-      <div className="mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t border-border/70 pt-4">
+      <div className="mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t border-border pt-4">
         <div>
           <span className="text-sm font-semibold text-foreground">{formatNumber(perf.customersReached)}</span>
           <span className="ml-1.5 text-xs text-muted-foreground">customers reached</span>

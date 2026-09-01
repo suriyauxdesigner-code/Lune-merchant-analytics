@@ -17,7 +17,7 @@ import { QualificationBreakdown } from "@/components/analytics/qualification-bre
 import { TransactionLogTable } from "@/components/analytics/transaction-log-table"
 import { brandById, campaignsForBrand } from "@/lib/data"
 import { formatAed, formatNumber, formatPercent, formatRatio } from "@/lib/utils"
-import { applyCampaignFilters, applyCampaignFiltersExceptDate, resolveDateRange, DEFAULT_FILTERS } from "@/lib/analytics-utils"
+import { applyCampaignFilters, applyCampaignFiltersExceptDate, resolveDateRange, dateRangeLabel, DEFAULT_FILTERS } from "@/lib/analytics-utils"
 import { aggregatePerformance, bucketSeries, sumSeriesInRange, previousPeriod, percentChange, generateTransactionRows } from "@/lib/mock-performance"
 
 export default function BrandAnalytics() {
@@ -40,6 +40,7 @@ export default function BrandAnalytics() {
 
   const cohortPerf = React.useMemo(() => aggregatePerformance(filteredCampaigns), [filteredCampaigns])
   const transactionRows = React.useMemo(() => generateTransactionRows(filteredCampaigns), [filteredCampaigns])
+  const periodLabel = dateRangeLabel(filters.dateRange)
 
   if (!brand) {
     return <EmptyState icon={<Store className="size-6" />} title="Brand not found" description="This brand doesn't exist in the sample dataset." />
@@ -74,6 +75,7 @@ export default function BrandAnalytics() {
               label="GMV"
               value={formatAed(current.transactionValue)}
               deltaPct={percentChange(current.transactionValue, previous.transactionValue)}
+              hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
             />
@@ -82,6 +84,7 @@ export default function BrandAnalytics() {
               label="Transactions"
               value={formatNumber(current.transactions)}
               deltaPct={percentChange(current.transactions, previous.transactions)}
+              hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
             />
@@ -91,17 +94,19 @@ export default function BrandAnalytics() {
               label="Cashback Issued"
               value={formatAed(current.cashbackIssued)}
               deltaPct={percentChange(current.cashbackIssued, previous.cashbackIssued)}
+              hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
             />
-            <KpiCard size="md" icon={<Target className="size-4" />} label="ROI" value={formatRatio(current.roi)} deltaPct={percentChange(current.roi, previous.roi)} tier="transaction" showTierBadge={false} />
-            <KpiCard size="md" icon={<Gauge className="size-4" />} label="Budget Utilization" value={formatPercent(cohortPerf.utilizationPct)} tier="transaction" showTierBadge={false} />
+            <KpiCard size="md" icon={<Target className="size-4" />} label="ROI" value={formatRatio(current.roi)} deltaPct={percentChange(current.roi, previous.roi)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+            <KpiCard size="md" icon={<Gauge className="size-4" />} label="Budget Utilization" value={formatPercent(cohortPerf.utilizationPct)} hint={periodLabel} tier="transaction" showTierBadge={false} />
             <KpiCard
               size="md"
               icon={<BarChart3 className="size-4" />}
               label="Avg. Transaction Value"
               value={formatAed(current.avgTransactionValue)}
               deltaPct={percentChange(current.avgTransactionValue, previous.avgTransactionValue)}
+              hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
             />

@@ -16,6 +16,11 @@ export const DATE_RANGE_OPTIONS: { value: DateRangeKey; label: string }[] = [
 
 export type DateRange = { from: Date; to: Date }
 
+/** The label shown under KPI cards to say what period the figure covers — e.g. "Last 90 days". */
+export function dateRangeLabel(key: DateRangeKey): string {
+  return DATE_RANGE_OPTIONS.find((o) => o.value === key)?.label ?? "Custom range"
+}
+
 export function resolveDateRange(key: DateRangeKey, custom?: DateRange): DateRange {
   if (key === "custom" && custom) return custom
   const to = NOW

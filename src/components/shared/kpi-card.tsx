@@ -49,16 +49,16 @@ export function KpiCard({
   showTierBadge?: boolean
 }) {
   return (
-    <div className={cn("rounded-[var(--radius)] bg-gradient-to-br from-card to-secondary/60 p-5", className)}>
+    <div className={cn("rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="text-sm font-semibold text-foreground">{label}</p>
         {icon && <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">{icon}</div>}
       </div>
       <div className="mt-3 flex items-baseline gap-2">
         <p className={cn("font-bold text-foreground", size === "lg" ? "text-2xl" : "text-lg")}>{value}</p>
         {deltaPct != null && <DeltaBadge pct={deltaPct} />}
       </div>
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}
       {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-2" />}
     </div>
   )

@@ -39,7 +39,7 @@ export function MetricTiles({
   return (
     <div className={`grid grid-cols-2 gap-3 ${colClass}`}>
       {items.map((item) => (
-        <div key={item.key} className="rounded-[var(--radius-sm)] bg-gradient-to-br from-card to-secondary/60 px-3.5 py-3">
+        <div key={item.key} className="rounded-[var(--radius-sm)] border border-border bg-card px-3.5 py-3">
           <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
           <p className="mt-1.5 text-lg font-bold text-foreground">{item.value}</p>
           {showTierBadges && item.tier && item.tier !== "live" && <TierBadge tier={item.tier} label={item.tierLabel} className="mt-1.5" />}

@@ -85,13 +85,13 @@ export default function CampaignAnalytics() {
 
       {/* Campaign Performance — did this campaign work? */}
       <KpiGrid>
-        <KpiCard icon={<TrendingUp className="size-4" />} label="GMV" value={formatAed(perf.transactionValue)} tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} tier="transaction" showTierBadge={false} />
-        <KpiCard size="md" icon={<Receipt className="size-4" />} label="Transactions" value={formatNumber(perf.transactions)} tier="transaction" showTierBadge={false} />
-        <KpiCard size="md" icon={<Target className="size-4" />} label="ROI" value={formatRatio(perf.roi)} tier="transaction" showTierBadge={false} />
-        <KpiCard size="md" icon={<Gauge className="size-4" />} label="Budget Used" value={formatPercent(perf.utilizationPct)} tier="transaction" showTierBadge={false} />
-        <KpiCard size="md" icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} tier="transaction" showTierBadge={false} />
-        <KpiCard size="md" icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<TrendingUp className="size-4" />} label="GMV" value={formatAed(perf.transactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<Receipt className="size-4" />} label="Transactions" value={formatNumber(perf.transactions)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<Target className="size-4" />} label="ROI" value={formatRatio(perf.roi)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<Gauge className="size-4" />} label="Budget Used" value={formatPercent(perf.utilizationPct)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
       </KpiGrid>
       <p className="mt-2 text-xs text-muted-foreground">Transaction and cashback figures are prototype estimates — they require transaction/settlement data.</p>
 

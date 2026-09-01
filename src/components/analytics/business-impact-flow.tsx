@@ -15,7 +15,7 @@ export function BusinessImpactFlow({ cashbackIssued, transactions, transactionVa
       <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-stretch sm:gap-0">
         {steps.map((step, i) => (
           <div key={step.label} className="flex flex-col items-stretch sm:flex-1 sm:flex-row sm:items-stretch">
-            <div className="flex-1 rounded-[var(--radius)] bg-gradient-to-br from-card to-secondary/60 p-5">
+            <div className="flex-1 rounded-[var(--radius)] border border-border bg-card p-5 shadow-card">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-xs font-medium text-muted-foreground">{step.label}</p>
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">

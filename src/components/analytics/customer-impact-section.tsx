@@ -28,7 +28,7 @@ export function CustomerImpactSection({ perf }: { perf: Perf }) {
       <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-stretch sm:gap-0">
         {FUNNEL_STAGES.map((stage, i) => (
           <div key={stage.key} className="flex flex-col items-stretch sm:flex-1 sm:flex-row sm:items-stretch">
-            <div className="flex-1 rounded-[var(--radius-sm)] bg-gradient-to-br from-card to-secondary/60 px-4 py-4 text-center">
+            <div className="flex-1 rounded-[var(--radius-sm)] border border-border bg-card px-4 py-4 text-center">
               <p className="text-xl font-bold text-foreground">{formatNumber(perf[FUNNEL_KEYS[i]])}</p>
               <p className="mt-1 text-xs font-medium text-muted-foreground">{stage.label}</p>
             </div>

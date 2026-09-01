@@ -69,6 +69,9 @@ export default function BrandAnalytics() {
   const locationStats = React.useMemo(() => computeLocationStats(transactionRows, customerRatio), [transactionRows, customerRatio])
 
   const activeCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active").length, [filteredCampaigns])
+  // Campaign Performance is a performance table — scheduled/pending/rejected campaigns have no
+  // GMV/ROI to show yet, so only live and completed campaigns belong in it.
+  const performanceCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active" || c.status === "completed"), [filteredCampaigns])
 
   const chartMetricValue = { gmv: current.transactionValue, transactions: current.transactions, cashback: current.cashbackIssued, roi: current.roi, aov: current.avgTransactionValue }[chartMetric]
   const chartMetricPrev = { gmv: previous.transactionValue, transactions: previous.transactions, cashback: previous.cashbackIssued, roi: previous.roi, aov: previous.avgTransactionValue }[chartMetric]
@@ -77,7 +80,7 @@ export default function BrandAnalytics() {
   function handleDownloadReport() {
     downloadCsv(
       `${brand?.slug ?? "brand"}-campaign-performance.csv`,
-      filteredCampaigns.map((c) => {
+      performanceCampaigns.map((c) => {
         const perf = getCampaignPerformance(c)
         return {
           Campaign: c.name,
@@ -186,8 +189,8 @@ export default function BrandAnalytics() {
 
           {/* 4. Campaign Performance — which campaign generates this brand's GMV? */}
           <section className="mt-12">
-            <SectionCard title="Campaign Performance" description="Every campaign for this brand. Click one to open its analytics." contentClassName="px-5 pb-5">
-              <CampaignComparisonTable campaigns={filteredCampaigns} />
+            <SectionCard title="Campaign Performance" description="Live and completed campaigns for this brand. Click one to open its analytics." contentClassName="px-5 pb-5">
+              <CampaignComparisonTable campaigns={performanceCampaigns} />
             </SectionCard>
           </section>
 

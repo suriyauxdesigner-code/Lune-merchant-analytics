@@ -57,6 +57,9 @@ export default function AnalyticsOverview() {
 
   const activeCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active"), [filteredCampaigns])
   const activeBrandCount = React.useMemo(() => new Set(activeCampaigns.map((c) => c.brandId)).size, [activeCampaigns])
+  // Campaign Performance is a performance table — scheduled/pending/rejected campaigns have no
+  // GMV/ROI to show yet, so only live and completed campaigns belong in it.
+  const performanceCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active" || c.status === "completed"), [filteredCampaigns])
   const nearLimitCount = React.useMemo(
     () => filteredCampaigns.filter((c) => getCampaignPerformance(c).hasStarted && getCampaignPerformance(c).utilizationPct >= 80).length,
     [filteredCampaigns]
@@ -158,8 +161,8 @@ export default function AnalyticsOverview() {
 
           {/* 4. Campaign Performance — across the whole portfolio */}
           <section className="mt-12">
-            <SectionCard title="Campaign Performance" description="Every campaign across every brand, sorted by GMV. Click one to open its analytics." contentClassName="px-5 pb-5">
-              <CampaignTable campaigns={filteredCampaigns} />
+            <SectionCard title="Campaign Performance" description="Live and completed campaigns across every brand, sorted by GMV. Click one to open its analytics." contentClassName="px-5 pb-5">
+              <CampaignTable campaigns={performanceCampaigns} />
             </SectionCard>
           </section>
 

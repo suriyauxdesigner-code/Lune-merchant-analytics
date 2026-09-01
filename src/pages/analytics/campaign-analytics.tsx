@@ -212,7 +212,7 @@ export default function CampaignAnalytics() {
       {/* 7 + 14. Merchant ID Qualification + Day/Time Performance — paired, both compact standalone visuals */}
       <section className="mt-12 grid gap-6 lg:grid-cols-2">
         {midStats.length > 1 && (
-          <SectionCard title="Merchant ID Qualification" description="Transaction volume vs. qualification rate">
+          <SectionCard title="Merchant ID Qualification" description="Which MIDs qualify less than average, despite high volume">
             <MidQualificationScatter mids={midStats} />
           </SectionCard>
         )}

@@ -6,10 +6,11 @@ const DAY_ORDER = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 const SHORT_DAY: Record<string, string> = { Sunday: "Sun", Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat" }
 
 const LABEL_W = 40
-const CELL_W = 54
-const CELL_H = 28
+const CELL_MIN_W = 48
+const CELL_MAX_W = 100
+const CELL_H = 36
 
-/** A day × time-of-day heatmap — darker cells mean more GMV. Modeled from each day's real total spread across a typical retail traffic curve. Fixed cell size so it stays compact on wide screens instead of stretching to fill the card. */
+/** A day × time-of-day heatmap — darker cells mean more GMV. Modeled from each day's real total spread across a typical retail traffic curve. Cells grow to fill the available card width (capped) instead of a fixed size or an unbounded stretch. */
 export function HeatmapGrid({ cells }: { cells: HeatCell[] }) {
   const blocks = [...new Set(cells.map((c) => c.block))]
   const max = Math.max(1, ...cells.map((c) => c.value))
@@ -26,10 +27,13 @@ export function HeatmapGrid({ cells }: { cells: HeatCell[] }) {
   return (
     <div>
       <div className="overflow-x-auto">
-        <div className="inline-grid gap-1" style={{ gridTemplateColumns: `${LABEL_W}px repeat(${blocks.length}, ${CELL_W}px)` }}>
+        <div
+          className="grid justify-center gap-1"
+          style={{ gridTemplateColumns: `${LABEL_W}px repeat(${blocks.length}, minmax(${CELL_MIN_W}px, ${CELL_MAX_W}px))`, minWidth: LABEL_W + blocks.length * CELL_MIN_W }}
+        >
           <div />
           {blocks.map((b) => (
-            <div key={b} className="pb-1 text-center text-[9px] font-medium leading-tight text-muted-foreground">
+            <div key={b} className="pb-1 text-center text-[10px] font-medium leading-tight text-muted-foreground">
               {b}
             </div>
           ))}
@@ -45,7 +49,7 @@ export function HeatmapGrid({ cells }: { cells: HeatCell[] }) {
                     key={`${day}-${block}`}
                     title={`${day}, ${block}: ${formatCompactAed(value)}`}
                     className="relative rounded-[4px]"
-                    style={{ width: CELL_W, height: CELL_H, backgroundColor: `hsl(160 62% 22% / ${0.08 + intensity * 0.85})` }}
+                    style={{ height: CELL_H, backgroundColor: `hsl(160 62% 22% / ${0.08 + intensity * 0.85})` }}
                   >
                     {isPeak && <span className="absolute inset-0 rounded-[4px] ring-2 ring-warning" />}
                   </div>

@@ -11,7 +11,8 @@ import { DetailGrid } from "@/components/analytics/detail-grid"
 import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
 import { MetricToggle } from "@/components/analytics/metric-toggle"
 import { BusinessImpactFlow } from "@/components/analytics/business-impact-flow"
-import { CustomerImpactSection } from "@/components/analytics/customer-impact-section"
+import { EngagementFunnel } from "@/components/analytics/engagement-funnel"
+import { CustomerImpactStats } from "@/components/analytics/customer-impact-stats"
 import { ChannelSplitTable } from "@/components/analytics/channel-split-table"
 import { QualificationBreakdown } from "@/components/analytics/qualification-breakdown"
 import { TransactionLogTable } from "@/components/analytics/transaction-log-table"
@@ -115,9 +116,12 @@ export default function CampaignAnalytics() {
       </section>
 
       {/* Customer Response */}
-      <section className="mt-12">
-        <SectionCard title="Customer Response" description="From offer shown to cashback rewarded">
-          <CustomerImpactSection perf={perf} />
+      <section className="mt-12 grid gap-6 lg:grid-cols-2">
+        <SectionCard title="Engagement Funnel" description="From offer shown to cashback rewarded">
+          <EngagementFunnel perf={perf} />
+        </SectionCard>
+        <SectionCard title="Customer Impact" description="Reach, acquisition and repeat behavior">
+          <CustomerImpactStats perf={perf} />
         </SectionCard>
       </section>
 

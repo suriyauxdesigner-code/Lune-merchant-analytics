@@ -29,7 +29,6 @@ export function KpiCard({
   hint,
   deltaPct,
   className,
-  variant = "card",
   size = "lg",
   showTierBadge = true,
 }: {
@@ -44,25 +43,18 @@ export function KpiCard({
   /** % change vs. the previous period of equal length. Omit (or null) when there's no prior-period activity to compare against. */
   deltaPct?: number | null
   className?: string
-  /** "card" (default): bordered tile. "plain": no border/shadow — for use as a cell inside KpiStrip. */
-  variant?: "card" | "plain"
   /** "lg" (default) for headline metrics, "md" for secondary metrics that should carry less visual weight. */
   size?: "lg" | "md"
   /** Set false to suppress the per-tile tier badge — use when a single caption below a group covers it instead. */
   showTierBadge?: boolean
 }) {
   return (
-    <div
-      className={cn(
-        variant === "card" ? "rounded-[var(--radius)] border border-border bg-card p-5 shadow-card" : "bg-card p-4",
-        className
-      )}
-    >
+    <div className={cn("rounded-[var(--radius)] bg-gradient-to-br from-card to-secondary/60 p-5", className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        {icon && <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">{icon}</div>}
+        {icon && <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">{icon}</div>}
       </div>
-      <div className="mt-2.5 flex items-baseline gap-2">
+      <div className="mt-3 flex items-baseline gap-2">
         <p className={cn("font-bold text-foreground", size === "lg" ? "text-2xl" : "text-lg")}>{value}</p>
         {deltaPct != null && <DeltaBadge pct={deltaPct} />}
       </div>
@@ -84,18 +76,9 @@ export function DeltaBadge({ pct }: { pct: number }) {
   )
 }
 
-/**
- * A single bordered strip housing several KPI cells divided by hairlines —
- * calmer than a wall of separate cards. Uses a 1px gap filled with the
- * border color so dividers stay correct whether the grid wraps to 2 or 3
- * columns or sits in one row of 6.
- */
-export function KpiStrip({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={cn("grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-border bg-border sm:grid-cols-3 xl:grid-cols-6", className)}>
-      {children}
-    </div>
-  )
+/** A responsive grid of individual KpiCards — 2 columns on mobile, up to 6 across on desktop. */
+export function KpiGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6", className)}>{children}</div>
 }
 
 export function TierBadge({ tier, label, className }: { tier: Exclude<DataTier, "live">; label?: string; className?: string }) {

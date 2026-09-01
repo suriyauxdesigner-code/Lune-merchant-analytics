@@ -1,8 +1,8 @@
 import * as React from "react"
 import { useParams, Link } from "react-router-dom"
-import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Clock, CalendarDays } from "lucide-react"
+import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Clock, CalendarDays, TrendingUp, Receipt, Coins, Target, Gauge, BarChart3 } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
-import { KpiCard, KpiStrip } from "@/components/shared/kpi-card"
+import { KpiCard, KpiGrid } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { ChannelBadge } from "@/components/shared/channel-badge"
@@ -84,15 +84,15 @@ export default function CampaignAnalytics() {
       </SectionCard>
 
       {/* Campaign Performance — did this campaign work? */}
-      <KpiStrip>
-        <KpiCard variant="plain" label="GMV" value={formatAed(perf.transactionValue)} tier="transaction" showTierBadge={false} />
-        <KpiCard variant="plain" label="Cashback Issued" value={formatAed(perf.cashbackIssued)} tier="transaction" showTierBadge={false} />
-        <KpiCard variant="plain" size="md" label="Transactions" value={formatNumber(perf.transactions)} tier="transaction" showTierBadge={false} />
-        <KpiCard variant="plain" size="md" label="ROI" value={formatRatio(perf.roi)} tier="transaction" showTierBadge={false} />
-        <KpiCard variant="plain" size="md" label="Budget Used" value={formatPercent(perf.utilizationPct)} tier="transaction" showTierBadge={false} />
-        <KpiCard variant="plain" size="md" label="Budget Remaining" value={formatAed(perf.remainingBudget)} tier="transaction" showTierBadge={false} />
-        <KpiCard variant="plain" size="md" label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} tier="transaction" showTierBadge={false} />
-      </KpiStrip>
+      <KpiGrid>
+        <KpiCard icon={<TrendingUp className="size-4" />} label="GMV" value={formatAed(perf.transactionValue)} tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<Receipt className="size-4" />} label="Transactions" value={formatNumber(perf.transactions)} tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<Target className="size-4" />} label="ROI" value={formatRatio(perf.roi)} tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<Gauge className="size-4" />} label="Budget Used" value={formatPercent(perf.utilizationPct)} tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} tier="transaction" showTierBadge={false} />
+        <KpiCard size="md" icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} tier="transaction" showTierBadge={false} />
+      </KpiGrid>
       <p className="mt-2 text-xs text-muted-foreground">Transaction and cashback figures are prototype estimates — they require transaction/settlement data.</p>
 
       {/* Business Impact */}

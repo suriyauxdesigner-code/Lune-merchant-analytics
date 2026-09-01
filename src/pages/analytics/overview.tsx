@@ -1,6 +1,7 @@
 import * as React from "react"
+import { TrendingUp, Receipt, Coins, Target, Gauge, BarChart3 } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
-import { KpiCard, KpiStrip } from "@/components/shared/kpi-card"
+import { KpiCard, KpiGrid } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
 import { FilterBar } from "@/components/analytics/filter-bar"
 import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
@@ -54,10 +55,17 @@ export default function AnalyticsOverview() {
       ) : (
         <>
           {/* 1. Executive Summary — how is my cashback program performing? */}
-          <KpiStrip>
-            <KpiCard variant="plain" label="GMV" value={formatAed(current.transactionValue)} deltaPct={percentChange(current.transactionValue, previous.transactionValue)} tier="transaction" showTierBadge={false} />
+          <KpiGrid>
             <KpiCard
-              variant="plain"
+              icon={<TrendingUp className="size-4" />}
+              label="GMV"
+              value={formatAed(current.transactionValue)}
+              deltaPct={percentChange(current.transactionValue, previous.transactionValue)}
+              tier="transaction"
+              showTierBadge={false}
+            />
+            <KpiCard
+              icon={<Receipt className="size-4" />}
               label="Transactions"
               value={formatNumber(current.transactions)}
               deltaPct={percentChange(current.transactions, previous.transactions)}
@@ -65,26 +73,26 @@ export default function AnalyticsOverview() {
               showTierBadge={false}
             />
             <KpiCard
-              variant="plain"
               size="md"
+              icon={<Coins className="size-4" />}
               label="Cashback Issued"
               value={formatAed(current.cashbackIssued)}
               deltaPct={percentChange(current.cashbackIssued, previous.cashbackIssued)}
               tier="transaction"
               showTierBadge={false}
             />
-            <KpiCard variant="plain" size="md" label="ROI" value={formatRatio(current.roi)} deltaPct={percentChange(current.roi, previous.roi)} tier="transaction" showTierBadge={false} />
-            <KpiCard variant="plain" size="md" label="Budget Utilization" value={formatPercent(cohortPerf.utilizationPct)} tier="transaction" showTierBadge={false} />
+            <KpiCard size="md" icon={<Target className="size-4" />} label="ROI" value={formatRatio(current.roi)} deltaPct={percentChange(current.roi, previous.roi)} tier="transaction" showTierBadge={false} />
+            <KpiCard size="md" icon={<Gauge className="size-4" />} label="Budget Utilization" value={formatPercent(cohortPerf.utilizationPct)} tier="transaction" showTierBadge={false} />
             <KpiCard
-              variant="plain"
               size="md"
+              icon={<BarChart3 className="size-4" />}
               label="Avg. Transaction Value"
               value={formatAed(current.avgTransactionValue)}
               deltaPct={percentChange(current.avgTransactionValue, previous.avgTransactionValue)}
               tier="transaction"
               showTierBadge={false}
             />
-          </KpiStrip>
+          </KpiGrid>
           <p className="mt-2 text-xs text-muted-foreground">
             Transaction and cashback figures are prototype estimates — they require transaction/settlement data. Change is versus the equivalent prior period.
           </p>

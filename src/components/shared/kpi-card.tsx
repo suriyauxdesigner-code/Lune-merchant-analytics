@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { Children, type ReactNode } from "react"
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { DataTier } from "@/lib/mock-performance"
@@ -76,9 +76,21 @@ export function DeltaBadge({ pct }: { pct: number }) {
   )
 }
 
-/** A responsive grid of individual KpiCards — 2 columns on mobile, up to 6 across on desktop. */
+const SM_COLS_CLASS: Record<number, string> = { 1: "sm:grid-cols-1", 2: "sm:grid-cols-2", 3: "sm:grid-cols-3" }
+const LG_COLS_CLASS: Record<number, string> = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4" }
+
+/**
+ * A responsive grid of individual KpiCards — never more than 4 per row. When
+ * wrapping is needed, rows are balanced rather than front-loaded (6 cards
+ * become 3+3, not 4+2; 7 become 4+3, not 4+2+1).
+ */
 export function KpiGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6", className)}>{children}</div>
+  const count = Children.count(children)
+  const rows = Math.max(1, Math.ceil(count / 4))
+  const cols = Math.min(4, Math.max(1, Math.ceil(count / rows)))
+  const smCols = Math.min(3, cols)
+
+  return <div className={cn("grid grid-cols-2 gap-4", SM_COLS_CLASS[smCols], LG_COLS_CLASS[cols], className)}>{children}</div>
 }
 
 export function TierBadge({ tier, label, className }: { tier: Exclude<DataTier, "live">; label?: string; className?: string }) {

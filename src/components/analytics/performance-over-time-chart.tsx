@@ -1,4 +1,4 @@
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import type { SeriesPoint } from "@/lib/mock-performance"
 import { formatCompactAed, formatNumber, formatRatio } from "@/lib/utils"
 
@@ -44,7 +44,13 @@ export function PerformanceOverTimeChart({ data, metric = "gmv" }: { data: Serie
       </div>
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id={`chart-fill-${metric}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={config.color} stopOpacity={0.28} />
+                <stop offset="100%" stopColor={config.color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <CartesianGrid vertical={false} stroke="hsl(220 16% 93%)" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} tick={{ fontSize: 12, fill: "hsl(220 9% 46%)" }} minTickGap={24} />
             <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: "hsl(220 9% 46%)" }} width={56} tickFormatter={(v) => config.format(v)} />
@@ -59,8 +65,17 @@ export function PerformanceOverTimeChart({ data, metric = "gmv" }: { data: Serie
               }}
               labelStyle={{ fontWeight: 600, marginBottom: 4, color: "hsl(220 20% 12%)" }}
             />
-            <Line type="monotone" dataKey="value" name={option.label} stroke={config.color} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-          </LineChart>
+            <Area
+              type="monotone"
+              dataKey="value"
+              name={option.label}
+              stroke={config.color}
+              strokeWidth={2}
+              fill={`url(#chart-fill-${metric})`}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>

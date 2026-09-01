@@ -16,7 +16,8 @@ const STAGES: { key: keyof FunnelData; label: string; tier: Exclude<DataTier, "l
   { key: "offerViewed", label: "Offer Viewed", tier: "future" },
   { key: "offerClicked", label: "Offer Clicked", tier: "future" },
   { key: "transactions", label: "Transaction", tier: "transaction" },
-  { key: "cashbackIssuedCount", label: "Cashback Issued", tier: "transaction" },
+  // "Rewarded Transactions" — a transaction count, distinct from the "Cashback Issued" AED value shown elsewhere.
+  { key: "cashbackIssuedCount", label: "Rewarded Transactions", tier: "transaction" },
 ]
 
 export function CampaignFunnel({ data }: { data: FunnelData }) {

@@ -9,7 +9,7 @@ const TIER_BADGE_STYLE: Record<Exclude<DataTier, "live">, string> = {
 
 const TIER_SHORT_LABEL: Record<Exclude<DataTier, "live">, string> = {
   transaction: "Requires transaction data",
-  future: "Future capability",
+  future: "Coming soon",
 }
 
 /**
@@ -27,6 +27,7 @@ export function KpiCard({
   icon,
   hint,
   className,
+  variant = "card",
 }: {
   label: string
   value: ReactNode
@@ -37,9 +38,16 @@ export function KpiCard({
   icon?: ReactNode
   hint?: string
   className?: string
+  /** "card" (default): bordered tile. "plain": no border/shadow — for use as a cell inside KpiStrip. */
+  variant?: "card" | "plain"
 }) {
   return (
-    <div className={cn("rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
+    <div
+      className={cn(
+        variant === "card" ? "rounded-[var(--radius)] border border-border bg-card p-5 shadow-card" : "bg-card p-4",
+        className
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
         {icon && <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">{icon}</div>}
@@ -47,6 +55,20 @@ export function KpiCard({
       <p className="mt-2.5 text-2xl font-bold text-foreground">{value}</p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       {tier !== "live" && <TierBadge tier={tier} label={tierLabel} className="mt-2" />}
+    </div>
+  )
+}
+
+/**
+ * A single bordered strip housing several KPI cells divided by hairlines —
+ * calmer than a wall of separate cards. Uses a 1px gap filled with the
+ * border color so dividers stay correct whether the grid wraps to 2 or 3
+ * columns or sits in one row of 6.
+ */
+export function KpiStrip({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-border bg-border sm:grid-cols-3 xl:grid-cols-6", className)}>
+      {children}
     </div>
   )
 }

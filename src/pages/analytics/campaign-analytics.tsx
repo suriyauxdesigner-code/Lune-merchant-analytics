@@ -140,7 +140,7 @@ export default function CampaignAnalytics() {
               { key: "view-click", label: "View → Click Rate", value: formatPercent(perf.viewToClickRate * 100), tier: "future" },
               { key: "click-txn", label: "Click → Transaction Rate", value: formatPercent(perf.clickToTransactionRate * 100), tier: "future" },
               { key: "offer-txn", label: "Offer → Transaction Conversion", value: formatPercent(perf.offerToTransactionRate * 100), tier: "future" },
-              { key: "txn-cashback", label: "Transaction → Cashback Issued Rate", value: formatPercent(perf.transactionToCashbackRate * 100), tier: "transaction" },
+              { key: "txn-cashback", label: "Transaction → Rewarded Rate", value: formatPercent(perf.transactionToCashbackRate * 100), tier: "transaction" },
             ]}
           />
         </SectionCard>

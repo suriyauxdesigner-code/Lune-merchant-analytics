@@ -49,7 +49,7 @@ export function KpiCard({
   showTierBadge?: boolean
 }) {
   return (
-    <div className={cn("rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
+    <div className={cn("w-full max-w-[300px] justify-self-start rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-semibold text-foreground">{label}</p>
         {icon && <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">{icon}</div>}

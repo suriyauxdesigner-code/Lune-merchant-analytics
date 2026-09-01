@@ -77,7 +77,6 @@ export default function AnalyticsOverview() {
               showTierBadge={false}
             />
             <KpiCard
-              size="md"
               icon={<Coins className="size-4" />}
               label="Cashback Issued"
               value={formatAed(current.cashbackIssued)}
@@ -86,10 +85,9 @@ export default function AnalyticsOverview() {
               tier="transaction"
               showTierBadge={false}
             />
-            <KpiCard size="md" icon={<Target className="size-4" />} label="ROI" value={formatRatio(current.roi)} deltaPct={percentChange(current.roi, previous.roi)} hint={periodLabel} tier="transaction" showTierBadge={false} />
-            <KpiCard size="md" icon={<Gauge className="size-4" />} label="Budget Utilization" value={formatPercent(cohortPerf.utilizationPct)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+            <KpiCard icon={<Target className="size-4" />} label="ROI" value={formatRatio(current.roi)} deltaPct={percentChange(current.roi, previous.roi)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+            <KpiCard icon={<Gauge className="size-4" />} label="Budget Utilization" value={formatPercent(cohortPerf.utilizationPct)} hint={periodLabel} tier="transaction" showTierBadge={false} />
             <KpiCard
-              size="md"
               icon={<BarChart3 className="size-4" />}
               label="Avg. Transaction Value"
               value={formatAed(current.avgTransactionValue)}

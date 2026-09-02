@@ -21,7 +21,7 @@ export default function CampaignsList() {
           </Button>
         }
       />
-      <SectionCard title="All Campaigns" description="Click a campaign to open its analytics" contentClassName="px-4 pb-5 sm:px-5">
+      <SectionCard title="All Campaigns" description="Click a campaign to view its details" contentClassName="px-4 pb-5 sm:px-5">
         <CampaignTable campaigns={CAMPAIGNS} />
       </SectionCard>
     </div>

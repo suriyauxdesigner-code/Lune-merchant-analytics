@@ -103,8 +103,10 @@ export default function BrandAnalytics() {
   const performanceCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active" || c.status === "completed"), [filteredCampaigns])
   const rankedCampaigns = React.useMemo(() => performanceCampaigns.map((c) => ({ campaign: c, perf: getCampaignPerformance(c) })), [performanceCampaigns])
 
-  // The single featured campaign — highest by whichever metric is selected. The list below
-  // excludes it, so the highlight and the comparison table never repeat the same campaign.
+  // Top Campaign is a summary highlight of this same dataset — the campaign with the strongest
+  // value on whichever metric is selected. Campaign Performance below always lists every
+  // campaign, including this one; the two are a highlight and a full comparison, not two
+  // different datasets.
   const topEntry = React.useMemo(() => {
     if (rankedCampaigns.length === 0) return null
     return [...rankedCampaigns].sort((a, b) => {
@@ -115,19 +117,17 @@ export default function BrandAnalytics() {
 
   const campaignRows: CampaignPerformanceRow[] = React.useMemo(
     () =>
-      rankedCampaigns
-        .filter(({ campaign }) => campaign.id !== topEntry?.campaign.id)
-        .map(({ campaign, perf }) => ({
-          id: campaign.id,
-          name: campaign.name,
-          status: campaign.status,
-          gmv: perf.transactionValue,
-          transactions: perf.transactions,
-          roi: perf.roi,
-          cashback: perf.cashbackIssued,
-          utilizationPct: perf.utilizationPct,
-        })),
-    [rankedCampaigns, topEntry]
+      rankedCampaigns.map(({ campaign, perf }) => ({
+        id: campaign.id,
+        name: campaign.name,
+        status: campaign.status,
+        gmv: perf.transactionValue,
+        transactions: perf.transactions,
+        roi: perf.roi,
+        cashback: perf.cashbackIssued,
+        utilizationPct: perf.utilizationPct,
+      })),
+    [rankedCampaigns]
   )
 
   const chartMetricValue = { gmv: current.transactionValue, transactions: current.transactions, cashback: current.cashbackIssued, roi: current.roi, aov: current.avgTransactionValue }[chartMetric]
@@ -299,18 +299,14 @@ export default function BrandAnalytics() {
             </SectionCard>
           </section>
 
-          {/* 4. Campaign Performance — the detailed comparison, excluding the campaign already featured above */}
+          {/* 4. Campaign Performance — every live and completed campaign for this brand, full comparison */}
           <section className="mt-12">
-            <SectionCard title="Campaign Performance" description="Every other live and completed campaign for this brand. Sort a column, or click a row to open it.">
+            <SectionCard title="Campaign Performance" description="All live and completed campaigns for this brand. Sort a column, or click a row to open its analytics.">
               <CampaignPerformanceTable
                 rows={campaignRows}
                 onSelect={(id) => navigate(`/analytics/campaigns/${id}`)}
-                emptyTitle={rankedCampaigns.length <= 1 ? "Only one campaign in this range" : "No other campaigns"}
-                emptyDescription={
-                  rankedCampaigns.length <= 1
-                    ? `${brand.name} has ${rankedCampaigns.length === 0 ? "no" : "only one"} active or completed campaign in this range${rankedCampaigns.length === 1 ? " — it's shown above as Top Campaign" : ""}. Widen the date range to compare more.`
-                    : "This brand doesn't have other campaigns to compare in this range."
-                }
+                emptyTitle="No campaigns in this range"
+                emptyDescription={`${brand.name} has no active or completed campaigns in this range. Widen the date range to see more.`}
               />
             </SectionCard>
           </section>

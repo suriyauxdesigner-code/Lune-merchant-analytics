@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppShell } from "@/components/layout/app-shell"
 import CampaignsList from "@/pages/campaigns-list"
+import CampaignDetail from "@/pages/campaign-detail"
 import BrandsList from "@/pages/brands-list"
 import BrandDetail from "@/pages/brand-detail"
 import Settings from "@/pages/settings"
@@ -20,6 +21,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to={DEFAULT_ANALYTICS_PATH} replace />} />
           <Route path="/campaigns" element={<CampaignsList />} />
+          <Route path="/campaigns/:campaignId" element={<CampaignDetail />} />
           <Route path="/brands" element={<BrandsList />} />
           <Route path="/brands/:brandId" element={<BrandDetail />} />
           <Route path="/settings" element={<Settings />} />

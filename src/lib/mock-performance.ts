@@ -52,6 +52,30 @@ function daysBetween(a: Date, b: Date) {
   return Math.max(0, Math.round((b.getTime() - a.getTime()) / 86_400_000))
 }
 
+// --- campaign configuration copy (Campaign Detail) ----------------------
+// Not part of today's campaign creation form — deterministic so each campaign always shows the
+// same goal/hold period, and no two runs of the prototype disagree with each other.
+
+const CAMPAIGN_GOALS = [
+  "Grow average spend",
+  "Drive new customer acquisition",
+  "Increase transaction frequency",
+  "Re-engage lapsed customers",
+  "Grow in-store basket size",
+  "Boost weekend traffic",
+]
+
+/** A campaign's stated objective — deterministic per campaign, not yet a real configuration field. */
+export function campaignGoal(campaign: Campaign): string {
+  const index = Math.min(CAMPAIGN_GOALS.length - 1, Math.floor(seeded(campaign.id, 60, 0, CAMPAIGN_GOALS.length)))
+  return CAMPAIGN_GOALS[index]
+}
+
+/** Days between a qualifying purchase and cashback being credited — deterministic per campaign. */
+export function holdPeriodDays(campaign: Campaign): number {
+  return Math.round(seeded(campaign.id, 61, 7, 45) / 5) * 5
+}
+
 // --- per-campaign mock performance --------------------------------------
 
 export type DailyPoint = { date: string; transactions: number; transactionValue: number; cashbackIssued: number }

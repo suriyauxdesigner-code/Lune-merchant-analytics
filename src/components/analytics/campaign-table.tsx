@@ -14,7 +14,7 @@ import { PackageSearch } from "lucide-react"
 
 type SortKey = "gmv" | "transactions" | "cashback" | "roi" | "budgetUsed"
 
-/** The Main Analytics "Campaign Performance" table — which campaigns are driving the business results, sorted business-first (GMV by default). */
+/** The Campaigns list table — every campaign across all brands. Click a row to open its Campaign Detail. */
 export function CampaignTable({ campaigns, showBrand = true }: { campaigns: Campaign[]; showBrand?: boolean }) {
   const navigate = useNavigate()
   const [sortKey, setSortKey] = React.useState<SortKey>("gmv")
@@ -78,7 +78,7 @@ export function CampaignTable({ campaigns, showBrand = true }: { campaigns: Camp
           {pageRows.map(({ campaign: c, perf }) => {
             const brand = brandById(c.brandId)
             return (
-              <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/analytics/campaigns/${c.id}`)}>
+              <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/campaigns/${c.id}`)}>
                 <TableCell>
                   <span className="font-medium text-foreground">{c.name}</span>
                 </TableCell>

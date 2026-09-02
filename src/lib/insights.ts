@@ -1,4 +1,4 @@
-import { formatCompactAed, formatPercent, formatRatio } from "./utils"
+import { formatAed, formatCompactAed, formatPercent, formatRatio } from "./utils"
 import { getPacingStatus } from "./analytics-utils"
 import type { QualificationBucket, WeekdayPoint } from "./mock-performance"
 
@@ -13,65 +13,56 @@ function topQualificationReason(buckets: QualificationBucket[]): { reason: strin
 }
 
 // ---------------------------------------------------------------------------
-// Portfolio Insights — Merchant Analytics. "Where should I focus across brands?"
+// Performance Insights — Merchant Analytics. "Which brands, and where should I look next?"
+// Every rule compares brands directly against each other, mirroring the Brand Performance
+// and Campaign Performance comparison tables on the same page.
 // ---------------------------------------------------------------------------
 
-export function generatePortfolioInsights(input: {
-  brands: { name: string; gmv: number; utilizationPct: number }[]
-  campaignRois: number[]
-  portfolioAvgRoi: number
-  weekday: WeekdayPoint[]
-}): Insight[] {
+export function generatePortfolioInsights(input: { brands: { name: string; gmv: number; roi: number; utilizationPct: number }[] }): Insight[] {
   const insights: Insight[] = []
+  const active = input.brands.filter((b) => b.gmv > 0)
+  if (active.length === 0) return insights
 
-  const sortedByGmv = [...input.brands].filter((b) => b.gmv > 0).sort((a, b) => b.gmv - a.gmv)
-  if (sortedByGmv.length > 0) {
-    const top = sortedByGmv[0]
+  const topGmv = [...active].sort((a, b) => b.gmv - a.gmv)[0]
+  insights.push({
+    id: "top-performer",
+    tone: "positive",
+    title: "Top performer",
+    description: `${topGmv.name} generated the highest GMV at ${formatAed(topGmv.gmv)}.`,
+  })
+
+  const topRoi = [...active].sort((a, b) => b.roi - a.roi)[0]
+  if (topRoi) {
     insights.push({
-      id: "top-brand",
+      id: "highest-roi",
       tone: "positive",
-      title: `${top.name} is the strongest-performing brand by GMV`,
-      description: `${top.name} generated ${formatCompactAed(top.gmv)} in GMV this period — ahead of every other brand in the portfolio.`,
+      title: "Highest ROI",
+      description: `${topRoi.name} delivered the strongest ROI at ${formatRatio(topRoi.roi)}.`,
     })
   }
 
-  const belowAvg = input.campaignRois.filter((roi) => roi > 0 && roi < input.portfolioAvgRoi).length
-  if (belowAvg > 0) {
+  // Excludes the brand already called out above (as GMV or ROI leader) so this doesn't just repeat one of them.
+  const avgRoi = active.reduce((s, b) => s + b.roi, 0) / active.length
+  const growth = [...active]
+    .filter((b) => b.name !== topGmv.name && b.name !== topRoi?.name && b.roi > avgRoi && b.gmv < topGmv.gmv * 0.6)
+    .sort((a, b) => b.roi - a.roi)[0]
+  if (growth) {
     insights.push({
-      id: "below-avg-roi",
-      tone: "warning",
-      title: `${belowAvg} campaign${belowAvg === 1 ? "" : "s"} below portfolio-average ROI`,
-      description: `Portfolio-average return on cashback is ${formatRatio(input.portfolioAvgRoi)} — these campaigns are underperforming that benchmark and are worth a closer look.`,
+      id: "growth-opportunity",
+      tone: "neutral",
+      title: "Growth opportunity",
+      description: `${growth.name} has strong ROI (${formatRatio(growth.roi)}) but significantly lower GMV than the top brands.`,
     })
   }
 
-  const atRiskBrand = [...input.brands].sort((a, b) => b.utilizationPct - a.utilizationPct)[0]
-  if (atRiskBrand && atRiskBrand.utilizationPct >= 75) {
+  const mostUtilized = [...active].sort((a, b) => b.utilizationPct - a.utilizationPct)[0]
+  if (mostUtilized && mostUtilized.utilizationPct >= 40) {
     insights.push({
-      id: "budget-at-risk",
-      tone: "warning",
-      title: `${atRiskBrand.name} has consumed ${formatPercent(atRiskBrand.utilizationPct, 0)} of its budget`,
-      description: "Consider a top-up if its campaigns should keep running through their full window.",
+      id: "budget-attention",
+      tone: mostUtilized.utilizationPct >= 80 ? "warning" : "neutral",
+      title: "Budget attention",
+      description: `${mostUtilized.name} has used ${formatPercent(mostUtilized.utilizationPct, 0)} of its campaign budget while generating ${formatAed(mostUtilized.gmv)} in GMV.`,
     })
-  }
-
-  const weekdayTotal = input.weekday.filter((d) => !d.isWeekend).reduce((s, d) => s + d.transactionValue, 0)
-  const weekdayDays = input.weekday.filter((d) => !d.isWeekend).length || 1
-  const weekendTotal = input.weekday.filter((d) => d.isWeekend).reduce((s, d) => s + d.transactionValue, 0)
-  const weekendDays = input.weekday.filter((d) => d.isWeekend).length || 1
-  const weekdayAvg = weekdayTotal / weekdayDays
-  const weekendAvg = weekendTotal / weekendDays
-  if (weekdayTotal > 0 && weekendTotal > 0) {
-    const weekendHigher = weekendAvg > weekdayAvg
-    const diffPct = weekdayAvg > 0 ? Math.abs((weekendAvg - weekdayAvg) / weekdayAvg) * 100 : 0
-    if (diffPct >= 5) {
-      insights.push({
-        id: "weekday-weekend",
-        tone: "neutral",
-        title: weekendHigher ? "Weekend campaigns outperform weekday campaigns" : "Weekday campaigns outperform weekend campaigns",
-        description: `Average daily GMV is ${formatPercent(diffPct, 0)} higher on ${weekendHigher ? "Friday–Saturday" : "Sunday–Thursday"} than the rest of the week.`,
-      })
-    }
   }
 
   return insights.slice(0, 4)

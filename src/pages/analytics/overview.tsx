@@ -1,37 +1,20 @@
 import * as React from "react"
-import { TrendingUp, Receipt, Coins, Target, Store, Megaphone } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
+import { TrendingUp, Receipt, Coins, Target, Users, Megaphone, ArrowRight } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard, KpiGrid } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
-import { Card, CardContent } from "@/components/ui/card"
 import { FilterBar } from "@/components/analytics/filter-bar"
-import { PerformanceOverTimeChart, CHART_METRIC_OPTIONS, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
-import { MetricToggle } from "@/components/analytics/metric-toggle"
 import { PillToggle } from "@/components/analytics/pill-toggle"
-import { RankedBarList } from "@/components/analytics/ranked-bar-list"
-import { DonutChart } from "@/components/analytics/donut-chart"
-import { BrandComparisonTable } from "@/components/analytics/brand-comparison-table"
-import { CampaignTable } from "@/components/analytics/campaign-table"
-import { BudgetAllocationPanel } from "@/components/analytics/budget-allocation-panel"
+import { BrandPerformanceTable, type BrandMetric, type BrandPerformanceRow } from "@/components/analytics/brand-performance-table"
+import { CampaignPerformanceTable, type CampaignMetric, type CampaignPerformanceRow } from "@/components/analytics/campaign-performance-table"
 import { KeyInsights } from "@/components/analytics/key-insights"
-import { useNavigate } from "react-router-dom"
 import { BRANDS, CAMPAIGNS } from "@/lib/data"
 import { formatAed, formatNumber, formatRatio } from "@/lib/utils"
 import { applyCampaignFilters, applyCampaignFiltersExceptDate, resolveDateRange, dateRangeLabel, DEFAULT_FILTERS } from "@/lib/analytics-utils"
-import {
-  aggregatePerformance,
-  bucketSeries,
-  bucketByDayOfWeek,
-  sumSeriesInRange,
-  previousPeriod,
-  percentChange,
-  getCampaignPerformance,
-  generateTransactionRows,
-} from "@/lib/mock-performance"
-import { computeChannelBehavior } from "@/lib/transaction-stats"
-import { generatePortfolioInsights, trendCaption } from "@/lib/insights"
+import { aggregatePerformance, sumSeriesInRange, previousPeriod, percentChange, getCampaignPerformance } from "@/lib/mock-performance"
+import { generatePortfolioInsights } from "@/lib/insights"
 
-type BrandMetric = "gmv" | "transactions" | "roi" | "customers"
 const BRAND_METRIC_OPTIONS: { value: BrandMetric; label: string }[] = [
   { value: "gmv", label: "GMV" },
   { value: "transactions", label: "Transactions" },
@@ -39,42 +22,32 @@ const BRAND_METRIC_OPTIONS: { value: BrandMetric; label: string }[] = [
   { value: "customers", label: "Customers" },
 ]
 
-type CampaignMetric = "gmv" | "roi" | "transactions"
 const CAMPAIGN_METRIC_OPTIONS: { value: CampaignMetric; label: string }[] = [
   { value: "gmv", label: "GMV" },
   { value: "roi", label: "ROI" },
   { value: "transactions", label: "Transactions" },
 ]
 
-type ChannelMetric = "gmv" | "transactions" | "customers"
-const CHANNEL_METRIC_OPTIONS: { value: ChannelMetric; label: string }[] = [
-  { value: "gmv", label: "GMV" },
-  { value: "transactions", label: "Transactions" },
-  { value: "customers", label: "Customers" },
-]
-
-const BRAND_METRIC_FORMAT: Record<BrandMetric, (v: number) => string> = { gmv: formatAed, transactions: formatNumber, roi: (v) => formatRatio(v), customers: formatNumber }
+const TOP_CAMPAIGN_COUNT = 6
 
 /**
- * Merchant Analytics — "How is my entire Pulse program performing across all my brands and
- * campaigns?" Portfolio-level intelligence: compare brands and campaigns, track budget
- * allocation and channel mix, surface what needs attention. Deliberately does not show
- * Merchant ID / Terminal ID detail or customer demographics — that lives one and two levels
- * down, where "which brand" has already narrowed the question.
+ * Merchant Analytics — "How is my entire Pulse program performing, which brands and campaigns
+ * are driving it, and where should I look next?" A compact comparison surface, not a
+ * dashboard of every widget: portfolio snapshot → brand comparison → campaign comparison →
+ * insights. Deliberately has no charts — comparison, not visualization, is the point — and no
+ * Merchant ID / demographic / transaction-level detail, which lives one and two levels down.
  */
 export default function AnalyticsOverview() {
   const navigate = useNavigate()
   const [filters, setFilters] = React.useState(DEFAULT_FILTERS)
-  const [chartMetric, setChartMetric] = React.useState<ChartMetric>("gmv")
   const [brandMetric, setBrandMetric] = React.useState<BrandMetric>("gmv")
   const [campaignMetric, setCampaignMetric] = React.useState<CampaignMetric>("gmv")
-  const [channelMetric, setChannelMetric] = React.useState<ChannelMetric>("gmv")
 
   // Cohort: campaigns matching all filters, including date range (created-in-range). Powers
   // brand/campaign comparison, where "which brand/campaign" is the question being answered.
   const filteredCampaigns = React.useMemo(() => applyCampaignFilters(CAMPAIGNS, filters), [filters])
-  // Everything except date — used to build the full activity timeline so period comparisons and
-  // the chart aren't blind to activity from campaigns created just outside the selected window.
+  // Everything except date — used to build the full activity timeline so period comparisons
+  // aren't blind to activity from campaigns created just outside the selected window.
   const nonDateCampaigns = React.useMemo(() => applyCampaignFiltersExceptDate(CAMPAIGNS, filters), [filters])
 
   const range = resolveDateRange(filters.dateRange, filters.customRange)
@@ -84,17 +57,17 @@ export default function AnalyticsOverview() {
   // Period totals: how the portfolio performed in the selected window vs. the one before it.
   const current = React.useMemo(() => sumSeriesInRange(mergedDaily, range), [mergedDaily, range])
   const previous = React.useMemo(() => sumSeriesInRange(mergedDaily, prevRange), [mergedDaily, prevRange])
-  const chartSeries = React.useMemo(() => bucketSeries(mergedDaily, range), [mergedDaily, range])
-  const chartMetricValue = { gmv: current.transactionValue, transactions: current.transactions, cashback: current.cashbackIssued, roi: current.roi, aov: current.avgTransactionValue }[chartMetric]
-  const chartMetricPrev = { gmv: previous.transactionValue, transactions: previous.transactions, cashback: previous.cashbackIssued, roi: previous.roi, aov: previous.avgTransactionValue }[chartMetric]
-  const chartCaption = trendCaption(CHART_METRIC_OPTIONS.find((o) => o.value === chartMetric)?.label ?? "GMV", percentChange(chartMetricValue, chartMetricPrev))
 
-  // Cohort totals: portfolio-level budget/insights detail.
+  // Cohort totals: portfolio-level detail that only exists per-campaign (customers, budget),
+  // not on the daily series — plus the same cohort computed for the prior period, so every
+  // snapshot KPI can show a real comparison, not just the ones backed by a daily series.
   const cohortPerf = React.useMemo(() => aggregatePerformance(filteredCampaigns), [filteredCampaigns])
+  const previousCohortCampaigns = React.useMemo(() => applyCampaignFilters(CAMPAIGNS, { ...filters, dateRange: "custom", customRange: prevRange }), [filters, prevRange])
+  const previousCohortPerf = React.useMemo(() => aggregatePerformance(previousCohortCampaigns), [previousCohortCampaigns])
   const periodLabel = dateRangeLabel(filters.dateRange)
 
   const activeCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active"), [filteredCampaigns])
-  const activeBrandCount = React.useMemo(() => new Set(activeCampaigns.map((c) => c.brandId)).size, [activeCampaigns])
+  const previousActiveCampaigns = React.useMemo(() => previousCohortCampaigns.filter((c) => c.status === "active").length, [previousCohortCampaigns])
   // Ranked/tabular performance views only make sense for campaigns that have actually started.
   const performanceCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active" || c.status === "completed"), [filteredCampaigns])
 
@@ -103,56 +76,56 @@ export default function AnalyticsOverview() {
     [filteredCampaigns]
   )
 
-  const brandMetricValue = React.useCallback(
-    (perf: (typeof brandStats)[number]["perf"]) =>
-      brandMetric === "gmv" ? perf.transactionValue : brandMetric === "transactions" ? perf.transactions : brandMetric === "roi" ? perf.roi : perf.customersTransacted,
-    [brandMetric]
-  )
-
-  const rankedBrands = React.useMemo(
+  const brandRows: BrandPerformanceRow[] = React.useMemo(
     () =>
-      [...brandStats]
-        .sort((a, b) => brandMetricValue(b.perf) - brandMetricValue(a.perf))
-        .map(({ brand, perf }) => ({ id: brand.id, label: brand.name, value: brandMetricValue(perf), color: brand.logoColor })),
-    [brandStats, brandMetricValue]
+      brandStats.map(({ brand, perf }) => ({
+        id: brand.id,
+        name: brand.name,
+        logoInitials: brand.logoInitials,
+        logoColor: brand.logoColor,
+        gmv: perf.transactionValue,
+        transactions: perf.transactions,
+        customers: perf.customersTransacted,
+        roi: perf.roi,
+        utilizationPct: perf.utilizationPct,
+      })),
+    [brandStats]
   )
 
-  const campaignMetricValue = React.useCallback(
-    (perf: ReturnType<typeof getCampaignPerformance>) => (campaignMetric === "gmv" ? perf.transactionValue : campaignMetric === "roi" ? perf.roi : perf.transactions),
-    [campaignMetric]
-  )
-
-  const rankedCampaigns = React.useMemo(
+  const campaignRows: CampaignPerformanceRow[] = React.useMemo(
     () =>
-      performanceCampaigns
-        .map((c) => ({ campaign: c, perf: getCampaignPerformance(c) }))
-        .sort((a, b) => campaignMetricValue(b.perf) - campaignMetricValue(a.perf))
-        .slice(0, 6)
-        .map(({ campaign, perf }) => ({
-          id: campaign.id,
-          label: campaign.name,
-          value: campaignMetricValue(perf),
-          sublabel: BRANDS.find((b) => b.id === campaign.brandId)?.name,
-          color: BRANDS.find((b) => b.id === campaign.brandId)?.logoColor,
-        })),
-    [performanceCampaigns, campaignMetricValue]
+      performanceCampaigns.map((c) => {
+        const perf = getCampaignPerformance(c)
+        const brand = BRANDS.find((b) => b.id === c.brandId)
+        return {
+          id: c.id,
+          name: c.name,
+          status: c.status,
+          brandName: brand?.name ?? c.brandId,
+          brandInitials: brand?.logoInitials ?? "—",
+          brandColor: brand?.logoColor ?? "#999",
+          gmv: perf.transactionValue,
+          transactions: perf.transactions,
+          roi: perf.roi,
+          utilizationPct: perf.utilizationPct,
+        }
+      }),
+    [performanceCampaigns]
   )
 
-  const channelStats = React.useMemo(() => computeChannelBehavior(generateTransactionRows(filteredCampaigns)), [filteredCampaigns])
+  const topCampaignRows = React.useMemo(
+    () => [...campaignRows].sort((a, b) => (campaignMetric === "roi" ? b.roi - a.roi : campaignMetric === "gmv" ? b.gmv - a.gmv : b.transactions - a.transactions)).slice(0, TOP_CAMPAIGN_COUNT),
+    [campaignRows, campaignMetric]
+  )
 
-  const portfolioInsights = React.useMemo(() => {
-    const stats = brandStats.map(({ brand, perf }) => ({ name: brand.name, gmv: perf.transactionValue, utilizationPct: perf.utilizationPct }))
-    const campaignRois = filteredCampaigns.map((c) => getCampaignPerformance(c)).filter((p) => p.hasStarted).map((p) => p.roi)
-    return generatePortfolioInsights({ brands: stats, campaignRois, portfolioAvgRoi: cohortPerf.roi, weekday: bucketByDayOfWeek(cohortPerf.dailySeries) })
-  }, [brandStats, filteredCampaigns, cohortPerf])
+  const portfolioInsights = React.useMemo(
+    () => generatePortfolioInsights({ brands: brandRows.map((r) => ({ name: r.name, gmv: r.gmv, roi: r.roi, utilizationPct: r.utilizationPct })) }),
+    [brandRows]
+  )
 
   return (
     <div>
-      <PageHeader
-        title="Merchant Analytics"
-        description="How is your Pulse cashback program performing across every brand and campaign you own?"
-        showPrototypeTag
-      />
+      <PageHeader title="Analytics" description="Overall merchant performance across brands and campaigns." showPrototypeTag />
 
       <FilterBar filters={filters} onChange={setFilters} showCampaignSearch />
 
@@ -162,7 +135,7 @@ export default function AnalyticsOverview() {
         </div>
       ) : (
         <>
-          {/* 1. Portfolio Overview */}
+          {/* 1. Overall Merchant Snapshot */}
           <KpiGrid>
             <KpiCard
               icon={<TrendingUp className="size-4" />}
@@ -174,8 +147,17 @@ export default function AnalyticsOverview() {
               showTierBadge={false}
             />
             <KpiCard
+              icon={<Receipt className="size-4" />}
+              label="Total Transactions"
+              value={formatNumber(current.transactions)}
+              deltaPct={percentChange(current.transactions, previous.transactions)}
+              hint={periodLabel}
+              tier="transaction"
+              showTierBadge={false}
+            />
+            <KpiCard
               icon={<Coins className="size-4" />}
-              label="Cashback Invested"
+              label="Total Cashback"
               value={formatAed(current.cashbackIssued)}
               deltaPct={percentChange(current.cashbackIssued, previous.cashbackIssued)}
               hint={periodLabel}
@@ -183,104 +165,71 @@ export default function AnalyticsOverview() {
               showTierBadge={false}
             />
             <KpiCard
-              icon={<Receipt className="size-4" />}
-              label="Transactions"
-              value={formatNumber(current.transactions)}
-              deltaPct={percentChange(current.transactions, previous.transactions)}
+              icon={<Users className="size-4" />}
+              label="Total Customers"
+              value={formatNumber(cohortPerf.customersTransacted)}
+              deltaPct={percentChange(cohortPerf.customersTransacted, previousCohortPerf.customersTransacted)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
             />
-            <KpiCard icon={<Store className="size-4" />} label="Active Brands" value={formatNumber(activeBrandCount)} hint="Currently running a campaign" tier="live" />
-            <KpiCard icon={<Megaphone className="size-4" />} label="Active Campaigns" value={formatNumber(activeCampaigns.length)} hint="Across all brands" tier="live" />
             <KpiCard
               icon={<Target className="size-4" />}
-              label="Portfolio ROI"
+              label="Overall ROI"
               value={formatRatio(current.roi)}
               deltaPct={percentChange(current.roi, previous.roi)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
             />
+            <KpiCard
+              icon={<Megaphone className="size-4" />}
+              label="Active Campaigns"
+              value={formatNumber(activeCampaigns.length)}
+              deltaPct={percentChange(activeCampaigns.length, previousActiveCampaigns)}
+              hint={periodLabel}
+              tier="live"
+            />
           </KpiGrid>
           <p className="mt-2 text-xs text-muted-foreground">
             Transaction and cashback figures are prototype estimates — they require transaction/settlement data. Change is versus the equivalent prior period.
           </p>
 
-          {/* 2. Portfolio Performance */}
-          <section className="mt-12">
-            <SectionCard
-              title="GMV & Cashback Over Time"
-              description="Trend across every brand"
-              contentClassName="pt-2"
-              actions={<MetricToggle value={chartMetric} onChange={setChartMetric} />}
-            >
-              <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
-              {chartCaption && <p className="mt-3 border-t border-border/70 px-1 pt-4 text-xs text-muted-foreground">{chartCaption}</p>}
-            </SectionCard>
-          </section>
-
-          {/* 3. Brand Performance — which brand generates the most GMV? */}
+          {/* 2. Brand Performance — which of our brands are performing best? */}
           <section className="mt-12">
             <SectionCard
               title="Brand Performance"
-              description="Compare brands. Click one to open its analytics."
+              description="Compare brands across key performance metrics"
               actions={<PillToggle value={brandMetric} onChange={setBrandMetric} options={BRAND_METRIC_OPTIONS} />}
+              contentClassName="px-5 pb-3"
             >
-              <RankedBarList items={rankedBrands} formatValue={BRAND_METRIC_FORMAT[brandMetric]} onSelect={(id) => navigate(`/analytics/brands/${id}`)} />
+              <BrandPerformanceTable rows={brandRows} metric={brandMetric} onSelect={(id) => navigate(`/analytics/brands/${id}`)} />
+              <Link to="/brands" className="mt-1 inline-flex items-center gap-1 py-2 text-sm font-medium text-primary hover:underline">
+                View all brands
+                <ArrowRight className="size-3.5" />
+              </Link>
             </SectionCard>
-            <Card className="mt-4">
-              <CardContent className="p-5">
-                <BrandComparisonTable brands={BRANDS} campaigns={filteredCampaigns} />
-              </CardContent>
-            </Card>
           </section>
 
-          {/* 4. Campaign Portfolio — which campaigns are driving results across every brand? */}
+          {/* 3. Campaign Performance — which campaigns are driving that performance? */}
           <section className="mt-12">
             <SectionCard
-              title="Campaign Portfolio"
-              description="Top campaigns across every brand. Click one to open its analytics."
+              title="Campaign Performance"
+              description="Top campaigns across all brands"
               actions={<PillToggle value={campaignMetric} onChange={setCampaignMetric} options={CAMPAIGN_METRIC_OPTIONS} />}
+              contentClassName="px-5 pb-3"
             >
-              <RankedBarList
-                items={rankedCampaigns}
-                formatValue={campaignMetric === "roi" ? (v) => formatRatio(v) : campaignMetric === "gmv" ? formatAed : formatNumber}
-                onSelect={(id) => navigate(`/analytics/campaigns/${id}`)}
-              />
-            </SectionCard>
-            <Card className="mt-4">
-              <CardContent className="p-5">
-                <CampaignTable campaigns={performanceCampaigns} />
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* 5 + 6. Budget Allocation + Channel Mix — paired, both compact donut-based composition views */}
-          <section className="mt-12 grid gap-6 lg:grid-cols-2">
-            <SectionCard title="Budget Allocation" description="Cashback budget share vs. GMV share by brand">
-              <BudgetAllocationPanel
-                items={brandStats.map(({ brand, perf }) => ({ name: brand.name, budget: perf.budget, gmv: perf.transactionValue, color: brand.logoColor }))}
-              />
-            </SectionCard>
-            <SectionCard
-              title="Channel Mix"
-              description="Online vs. in-store across the portfolio"
-              actions={<PillToggle value={channelMetric} onChange={setChannelMetric} options={CHANNEL_METRIC_OPTIONS} />}
-            >
-              <DonutChart
-                segments={[
-                  { label: "Online", value: channelStats[0][channelMetric], color: "hsl(217 91% 55%)" },
-                  { label: "In-Store", value: channelStats[1][channelMetric], color: "hsl(38 92% 45%)" },
-                ]}
-                formatValue={channelMetric === "gmv" ? formatAed : formatNumber}
-              />
+              <CampaignPerformanceTable rows={topCampaignRows} metric={campaignMetric} onSelect={(id) => navigate(`/analytics/campaigns/${id}`)} />
+              <Link to="/campaigns" className="mt-1 inline-flex items-center gap-1 py-2 text-sm font-medium text-primary hover:underline">
+                View all campaigns
+                <ArrowRight className="size-3.5" />
+              </Link>
             </SectionCard>
           </section>
 
-          {/* 7. Portfolio Insights — where should I take action? */}
+          {/* 4. Performance Insights — where should I investigate? */}
           <section className="mt-12">
-            <SectionCard title="Portfolio Insights" description="Data-driven takeaways across your portfolio">
+            <SectionCard title="Performance Insights" description="Data-driven observations across your brand portfolio">
               <KeyInsights insights={portfolioInsights} />
             </SectionCard>
           </section>

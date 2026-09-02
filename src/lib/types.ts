@@ -28,6 +28,12 @@ export type MerchantId = {
   terminals: TerminalId[]
 }
 
+export type BrandSnapshot = {
+  avgTransactionValue: number
+  avgMonthlyOrders: number
+  monthlyMarketingBudget: number
+}
+
 export type Brand = {
   id: string
   name: string
@@ -37,6 +43,7 @@ export type Brand = {
   logoColor: string
   addedOn: string // ISO date
   merchantIds: MerchantId[]
+  businessSnapshot: BrandSnapshot
 }
 
 export type CampaignStatus =

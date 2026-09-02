@@ -58,6 +58,7 @@ export const BRANDS: Brand[] = [
         ],
       },
     ],
+    businessSnapshot: { avgTransactionValue: 250, avgMonthlyOrders: 2000, monthlyMarketingBudget: 40000 },
   },
   {
     id: "tryano",
@@ -89,6 +90,7 @@ export const BRANDS: Brand[] = [
         ],
       },
     ],
+    businessSnapshot: { avgTransactionValue: 340, avgMonthlyOrders: 1450, monthlyMarketingBudget: 32000 },
   },
   {
     id: "tanagra",
@@ -120,6 +122,7 @@ export const BRANDS: Brand[] = [
         ],
       },
     ],
+    businessSnapshot: { avgTransactionValue: 410, avgMonthlyOrders: 980, monthlyMarketingBudget: 28000 },
   },
   {
     id: "level-shoes",
@@ -151,6 +154,7 @@ export const BRANDS: Brand[] = [
         ],
       },
     ],
+    businessSnapshot: { avgTransactionValue: 520, avgMonthlyOrders: 1120, monthlyMarketingBudget: 55000 },
   },
 ]
 

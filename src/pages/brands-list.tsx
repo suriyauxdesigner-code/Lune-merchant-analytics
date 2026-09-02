@@ -11,7 +11,7 @@ export default function BrandsList() {
   return (
     <div>
       <PageHeader title="Brands" description="Manage brand profiles and onboarding details." />
-      <SectionCard title="Brands" description="Click a brand to open its analytics" contentClassName="px-4 pb-5 sm:px-5">
+      <SectionCard title="Brands" description="Click a brand to view its profile" contentClassName="px-4 pb-5 sm:px-5">
         <Table>
           <TableHeader>
             <TableRow>
@@ -27,7 +27,7 @@ export default function BrandsList() {
               const campaigns = campaignsForBrand(brand.id)
               const live = campaigns.filter((c) => c.status === "active").length
               return (
-                <TableRow key={brand.id} className="cursor-pointer" onClick={() => navigate(`/analytics/brands/${brand.id}`)}>
+                <TableRow key={brand.id} className="cursor-pointer" onClick={() => navigate(`/brands/${brand.id}`)}>
                   <TableCell>
                     <div className="flex items-center gap-2.5">
                       <BrandLogoTile initials={brand.logoInitials} color={brand.logoColor} size="sm" />

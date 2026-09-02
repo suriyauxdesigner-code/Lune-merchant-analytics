@@ -160,24 +160,7 @@ export default function BrandAnalytics() {
 
   return (
     <div>
-      <PageHeader
-        breadcrumb={[{ label: "Analytics" }]}
-        title={
-          <>
-            <BrandLogoTile initials={brand.logoInitials} color={brand.logoColor} />
-            {brand.name}
-          </>
-        }
-        description={`Performance and customer insights for ${brand.name}.`}
-        meta={<span>{allCampaigns.length} campaigns total · {MERCHANT.name}</span>}
-        showPrototypeTag
-        actions={
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadReport}>
-            <Download className="size-3.5" />
-            Download report
-          </Button>
-        }
-      />
+      <PageHeader title="Analytics" showPrototypeTag />
 
       {/* Brand switcher — the primary context for this entire page. Every brand's analytics live
           at this same page shape; picking one here swaps the content below rather than opening a
@@ -191,6 +174,25 @@ export default function BrandAnalytics() {
           ))}
         </TabsList>
       </Tabs>
+
+      {/* The selected brand's context — a secondary heading, not the page title */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <BrandLogoTile initials={brand.logoInitials} color={brand.logoColor} size="sm" />
+            <h2 className="text-xl font-bold text-foreground">{brand.name}</h2>
+          </div>
+          <p className="mt-1.5 text-sm text-muted-foreground">Performance and customer insights for {brand.name}.</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
+            <span>{allCampaigns.length} campaigns total</span>
+            <span>{MERCHANT.name}</span>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={handleDownloadReport}>
+          <Download className="size-3.5" />
+          Download report
+        </Button>
+      </div>
 
       <FilterBar filters={filters} onChange={setFilters} showBrand={false} showCampaignSearch />
 
@@ -300,7 +302,16 @@ export default function BrandAnalytics() {
           {/* 4. Campaign Performance — the detailed comparison, excluding the campaign already featured above */}
           <section className="mt-12">
             <SectionCard title="Campaign Performance" description="Every other live and completed campaign for this brand. Sort a column, or click a row to open it.">
-              <CampaignPerformanceTable rows={campaignRows} onSelect={(id) => navigate(`/analytics/campaigns/${id}`)} />
+              <CampaignPerformanceTable
+                rows={campaignRows}
+                onSelect={(id) => navigate(`/analytics/campaigns/${id}`)}
+                emptyTitle={rankedCampaigns.length <= 1 ? "Only one campaign in this range" : "No other campaigns"}
+                emptyDescription={
+                  rankedCampaigns.length <= 1
+                    ? `${brand.name} has ${rankedCampaigns.length === 0 ? "no" : "only one"} active or completed campaign in this range${rankedCampaigns.length === 1 ? " — it's shown above as Top Campaign" : ""}. Widen the date range to compare more.`
+                    : "This brand doesn't have other campaigns to compare in this range."
+                }
+              />
             </SectionCard>
           </section>
 

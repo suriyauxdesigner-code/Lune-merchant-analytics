@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppShell } from "@/components/layout/app-shell"
 import CampaignsList from "@/pages/campaigns-list"
 import BrandsList from "@/pages/brands-list"
+import BrandDetail from "@/pages/brand-detail"
 import Settings from "@/pages/settings"
 import BrandAnalytics from "@/pages/analytics/brand-analytics"
 import CampaignAnalytics from "@/pages/analytics/campaign-analytics"
@@ -20,6 +21,7 @@ export default function App() {
           <Route index element={<Navigate to={DEFAULT_ANALYTICS_PATH} replace />} />
           <Route path="/campaigns" element={<CampaignsList />} />
           <Route path="/brands" element={<BrandsList />} />
+          <Route path="/brands/:brandId" element={<BrandDetail />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/analytics" element={<Navigate to={DEFAULT_ANALYTICS_PATH} replace />} />
           <Route path="/analytics/brands/:brandId" element={<BrandAnalytics />} />

@@ -34,7 +34,17 @@ const COLUMN_ORDER: SortKey[] = ["gmv", "transactions", "roi", "cashback", "util
  * table rather than another ranked-bar visualization, so the two components don't repeat the
  * same information two different ways.
  */
-export function CampaignPerformanceTable({ rows, onSelect }: { rows: CampaignPerformanceRow[]; onSelect: (id: string) => void }) {
+export function CampaignPerformanceTable({
+  rows,
+  onSelect,
+  emptyTitle = "No other campaigns",
+  emptyDescription = "This brand doesn't have other campaigns to compare in this range.",
+}: {
+  rows: CampaignPerformanceRow[]
+  onSelect: (id: string) => void
+  emptyTitle?: string
+  emptyDescription?: string
+}) {
   const [sortKey, setSortKey] = React.useState<SortKey>("gmv")
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc")
 
@@ -50,7 +60,7 @@ export function CampaignPerformanceTable({ rows, onSelect }: { rows: CampaignPer
   const sorted = [...rows].sort((a, b) => (sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]))
 
   if (rows.length === 0) {
-    return <EmptyState icon={<PackageSearch className="size-6" />} title="No other campaigns" description="This brand doesn't have other campaigns to compare in this range." />
+    return <EmptyState icon={<PackageSearch className="size-6" />} title={emptyTitle} description={emptyDescription} />
   }
 
   return (

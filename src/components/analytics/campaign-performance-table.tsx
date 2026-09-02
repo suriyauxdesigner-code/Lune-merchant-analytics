@@ -1,6 +1,8 @@
+import * as React from "react"
+import { ChevronDown, ChevronUp, PackageSearch } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { BrandLogoTile } from "@/components/shared/brand-logo-tile"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { EmptyState } from "@/components/shared/empty-state"
 import { cn, formatAed, formatNumber, formatPercent, formatRatio } from "@/lib/utils"
 import type { CampaignStatus } from "@/lib/types"
 
@@ -8,50 +10,69 @@ export type CampaignPerformanceRow = {
   id: string
   name: string
   status: CampaignStatus
-  brandName: string
-  brandInitials: string
-  brandColor: string
   gmv: number
   transactions: number
   roi: number
+  cashback: number
   utilizationPct: number
 }
 
-export type CampaignMetric = "gmv" | "roi" | "transactions"
+type SortKey = "gmv" | "transactions" | "roi" | "cashback" | "utilizationPct"
 
-const METRIC_META: Record<CampaignMetric, { label: string; format: (v: number) => string; value: (r: CampaignPerformanceRow) => number }> = {
-  gmv: { label: "GMV", format: formatAed, value: (r) => r.gmv },
-  roi: { label: "ROI", format: (v) => formatRatio(v), value: (r) => r.roi },
-  transactions: { label: "Transactions", format: formatNumber, value: (r) => r.transactions },
+const COLUMN_META: Record<SortKey, { label: string; format: (v: number) => string }> = {
+  gmv: { label: "GMV", format: formatAed },
+  transactions: { label: "Transactions", format: formatNumber },
+  roi: { label: "ROI", format: (v) => formatRatio(v) },
+  cashback: { label: "Cashback", format: formatAed },
+  utilizationPct: { label: "Budget Used", format: (v) => formatPercent(v, 0) },
 }
 
-const SECONDARY_ORDER: CampaignMetric[] = ["gmv", "roi", "transactions"]
+const COLUMN_ORDER: SortKey[] = ["gmv", "transactions", "roi", "cashback", "utilizationPct"]
 
 /**
- * "Which campaigns are driving performance?" — deliberately distinct from Brand Performance:
- * a Brand column + status badge instead of a rank number, campaign name carries the primary
- * identity rather than a leaderboard position.
+ * The detailed comparison view sitting below the featured Top Campaign — a plain, sortable
+ * table rather than another ranked-bar visualization, so the two components don't repeat the
+ * same information two different ways.
  */
-export function CampaignPerformanceTable({ rows, metric, onSelect }: { rows: CampaignPerformanceRow[]; metric: CampaignMetric; onSelect: (id: string) => void }) {
-  const sorted = [...rows].sort((a, b) => METRIC_META[metric].value(b) - METRIC_META[metric].value(a))
-  const columns = [metric, ...SECONDARY_ORDER.filter((m) => m !== metric)]
+export function CampaignPerformanceTable({ rows, onSelect }: { rows: CampaignPerformanceRow[]; onSelect: (id: string) => void }) {
+  const [sortKey, setSortKey] = React.useState<SortKey>("gmv")
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc")
+
+  function handleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"))
+    } else {
+      setSortKey(key)
+      setSortDir("desc")
+    }
+  }
+
+  const sorted = [...rows].sort((a, b) => (sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]))
+
+  if (rows.length === 0) {
+    return <EmptyState icon={<PackageSearch className="size-6" />} title="No other campaigns" description="This brand doesn't have other campaigns to compare in this range." />
+  }
 
   return (
     <div>
-      {/* Desktop / tablet — comparison table */}
+      {/* Desktop / tablet — sortable comparison table */}
       <div className="hidden sm:block">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Campaign</TableHead>
-              <TableHead>Brand</TableHead>
-              <TableHead className="hidden md:table-cell">Status</TableHead>
-              {columns.map((col) => (
-                <TableHead key={col} className={cn("text-right", col === metric && "text-foreground")}>
-                  {METRIC_META[col].label}
+              <TableHead>Status</TableHead>
+              {COLUMN_ORDER.map((key) => (
+                <TableHead key={key} className="text-right">
+                  <button
+                    onClick={() => handleSort(key)}
+                    className={cn("inline-flex items-center gap-1 hover:text-foreground", key === sortKey && "font-semibold text-foreground")}
+                  >
+                    {COLUMN_META[key].label}
+                    {key === sortKey && (sortDir === "desc" ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />)}
+                  </button>
                 </TableHead>
               ))}
-              <TableHead className="hidden text-right lg:table-cell">Budget Used</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -59,41 +80,33 @@ export function CampaignPerformanceTable({ rows, metric, onSelect }: { rows: Cam
               <TableRow key={row.id} className="cursor-pointer" onClick={() => onSelect(row.id)}>
                 <TableCell className="font-semibold text-foreground">{row.name}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <BrandLogoTile initials={row.brandInitials} color={row.brandColor} size="sm" />
-                    <span className="text-muted-foreground">{row.brandName}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
                   <StatusBadge status={row.status} />
                 </TableCell>
-                {columns.map((col) => (
-                  <TableCell key={col} className={cn("text-right tabular-nums", col === metric ? "text-[15px] font-bold text-foreground" : "text-muted-foreground")}>
-                    {METRIC_META[col].format(METRIC_META[col].value(row))}
+                {COLUMN_ORDER.map((key) => (
+                  <TableCell key={key} className={cn("text-right tabular-nums", key === sortKey ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                    {COLUMN_META[key].format(row[key])}
                   </TableCell>
                 ))}
-                <TableCell className="hidden text-right tabular-nums text-muted-foreground lg:table-cell">{formatPercent(row.utilizationPct, 0)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
 
-      {/* Mobile — stacked rows, primary metric stays prominent, no squeezed table */}
+      {/* Mobile — stacked cards, not a squeezed table */}
       <div className="divide-y divide-border sm:hidden">
         {sorted.map((row) => (
-          <button key={row.id} onClick={() => onSelect(row.id)} className="flex w-full items-center justify-between gap-3 py-3 text-left">
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-foreground">{row.name}</p>
-              <div className="mt-1 flex items-center gap-1.5">
-                <BrandLogoTile initials={row.brandInitials} color={row.brandColor} size="sm" />
-                <span className="truncate text-xs text-muted-foreground">{row.brandName}</span>
-                <StatusBadge status={row.status} />
-              </div>
+          <button key={row.id} onClick={() => onSelect(row.id)} className="block w-full py-3 text-left">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate font-semibold text-foreground">{row.name}</span>
+              <StatusBadge status={row.status} />
             </div>
-            <div className="shrink-0 text-right">
-              <p className="text-base font-bold tabular-nums text-foreground">{METRIC_META[metric].format(METRIC_META[metric].value(row))}</p>
-              <p className="text-[11px] text-muted-foreground">{METRIC_META[metric].label}</p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {COLUMN_ORDER.map((key) => (
+                <span key={key}>
+                  {COLUMN_META[key].label} <span className="font-medium text-foreground">{COLUMN_META[key].format(row[key])}</span>
+                </span>
+              ))}
             </div>
           </button>
         ))}

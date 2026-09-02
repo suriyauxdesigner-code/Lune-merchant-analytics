@@ -1,20 +1,19 @@
 import * as React from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { Store, TrendingUp, Receipt, Coins, Target, Users, Megaphone, Download } from "lucide-react"
+import { Store, TrendingUp, Receipt, Coins, Target, Users, Download } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard, KpiGrid } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
-import { Card, CardContent } from "@/components/ui/card"
 import { BrandLogoTile } from "@/components/shared/brand-logo-tile"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FilterBar } from "@/components/analytics/filter-bar"
-import { PerformanceOverTimeChart, CHART_METRIC_OPTIONS, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
-import { MetricToggle } from "@/components/analytics/metric-toggle"
+import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
 import { PillToggle } from "@/components/analytics/pill-toggle"
-import { RankedBarList } from "@/components/analytics/ranked-bar-list"
-import { EngagementFunnel } from "@/components/analytics/engagement-funnel"
-import { CampaignComparisonTable } from "@/components/analytics/campaign-comparison-table"
+import { TopCampaignCard, type TopCampaignMetric } from "@/components/analytics/top-campaign-card"
+import { CampaignPerformanceTable, type CampaignPerformanceRow } from "@/components/analytics/campaign-performance-table"
+import { CustomerImpactStats } from "@/components/analytics/customer-impact-stats"
 import { CustomerDemographicsPanel } from "@/components/analytics/customer-demographics-panel"
 import { CustomerValuePanel } from "@/components/analytics/customer-value-panel"
 import { NewReturningPanel } from "@/components/analytics/new-returning-panel"
@@ -22,9 +21,9 @@ import { PurchaseFrequencyPanel } from "@/components/analytics/purchase-frequenc
 import { MidPerformancePanel } from "@/components/analytics/mid-performance-panel"
 import { LocationPerformanceTable } from "@/components/analytics/location-performance-table"
 import { ChannelBehaviourPanel } from "@/components/analytics/channel-behaviour-panel"
+import { EngagementFunnel } from "@/components/analytics/engagement-funnel"
 import { QualificationBreakdown } from "@/components/analytics/qualification-breakdown"
-import { TransactionSection } from "@/components/analytics/transaction-section"
-import { MERCHANT, brandById, campaignsForBrand } from "@/lib/data"
+import { MERCHANT, BRANDS, brandById, campaignsForBrand } from "@/lib/data"
 import { formatAed, formatNumber, formatRatio } from "@/lib/utils"
 import { applyCampaignFilters, applyCampaignFiltersExceptDate, resolveDateRange, dateRangeLabel, DEFAULT_FILTERS } from "@/lib/analytics-utils"
 import {
@@ -44,18 +43,22 @@ import { computeLocationStats, computeMidStats, computeChannelBehavior } from "@
 import { trendCaption } from "@/lib/insights"
 import { downloadCsv } from "@/lib/csv-export"
 
-type CampaignMetric = "gmv" | "roi"
-const CAMPAIGN_METRIC_OPTIONS: { value: CampaignMetric; label: string }[] = [
+const BRAND_CHART_OPTIONS: { value: ChartMetric; label: string }[] = [
   { value: "gmv", label: "GMV" },
+  { value: "transactions", label: "Transactions" },
+]
+
+const TOP_CAMPAIGN_OPTIONS: { value: TopCampaignMetric; label: string }[] = [
   { value: "roi", label: "ROI" },
+  { value: "gmv", label: "GMV" },
+  { value: "transactions", label: "Transactions" },
 ]
 
 /**
- * Brand Analytics — "How is this specific brand performing, who are its customers, and which
- * campaigns/locations are driving performance?" Brand + customer intelligence: everything here
- * is scoped to a single brand and goes far deeper into who the customer is (demographics, value,
- * retention) and where the money moves (Merchant IDs, locations, channels) than the portfolio
- * view one level up.
+ * Brand Analytics — the main Analytics landing experience. "How is this brand performing, which
+ * campaign is leading, who are its customers, and where does it move?" Everything here is scoped
+ * to a single brand the merchant is already working within — there is no cross-brand comparison
+ * or ranking; switching brands changes context entirely rather than adding another row to a table.
  */
 export default function BrandAnalytics() {
   const { brandId = "" } = useParams()
@@ -63,7 +66,7 @@ export default function BrandAnalytics() {
   const brand = brandById(brandId)
   const [filters, setFilters] = React.useState(DEFAULT_FILTERS)
   const [chartMetric, setChartMetric] = React.useState<ChartMetric>("gmv")
-  const [campaignMetric, setCampaignMetric] = React.useState<CampaignMetric>("gmv")
+  const [topMetric, setTopMetric] = React.useState<TopCampaignMetric>("roi")
 
   const allCampaigns = React.useMemo(() => campaignsForBrand(brandId), [brandId])
   const filteredCampaigns = React.useMemo(() => applyCampaignFilters(allCampaigns, filters), [allCampaigns, filters])
@@ -78,6 +81,11 @@ export default function BrandAnalytics() {
   const chartSeries = React.useMemo(() => bucketSeries(mergedDaily, range), [mergedDaily, range])
 
   const cohortPerf = React.useMemo(() => aggregatePerformance(filteredCampaigns), [filteredCampaigns])
+  const previousCohortCampaigns = React.useMemo(
+    () => applyCampaignFilters(allCampaigns, { ...filters, dateRange: "custom", customRange: prevRange }),
+    [allCampaigns, filters, prevRange]
+  )
+  const previousCohortPerf = React.useMemo(() => aggregatePerformance(previousCohortCampaigns), [previousCohortCampaigns])
   const transactionRows = React.useMemo(() => generateTransactionRows(filteredCampaigns), [filteredCampaigns])
   const periodLabel = dateRangeLabel(filters.dateRange)
 
@@ -91,26 +99,40 @@ export default function BrandAnalytics() {
   const newReturningStats = React.useMemo(() => getNewReturningStats(filteredCampaigns), [filteredCampaigns])
   const freqBuckets = React.useMemo(() => getPurchaseFrequency(filteredCampaigns), [filteredCampaigns])
 
-  const activeCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active").length, [filteredCampaigns])
   // Ranked/tabular performance views only make sense for campaigns that have actually started.
   const performanceCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active" || c.status === "completed"), [filteredCampaigns])
+  const rankedCampaigns = React.useMemo(() => performanceCampaigns.map((c) => ({ campaign: c, perf: getCampaignPerformance(c) })), [performanceCampaigns])
 
-  const rankedCampaigns = React.useMemo(
+  // The single featured campaign — highest by whichever metric is selected. The list below
+  // excludes it, so the highlight and the comparison table never repeat the same campaign.
+  const topEntry = React.useMemo(() => {
+    if (rankedCampaigns.length === 0) return null
+    return [...rankedCampaigns].sort((a, b) => {
+      const value = (p: (typeof rankedCampaigns)[number]["perf"]) => (topMetric === "roi" ? p.roi : topMetric === "gmv" ? p.transactionValue : p.transactions)
+      return value(b.perf) - value(a.perf)
+    })[0]
+  }, [rankedCampaigns, topMetric])
+
+  const campaignRows: CampaignPerformanceRow[] = React.useMemo(
     () =>
-      performanceCampaigns
-        .map((c) => ({ campaign: c, perf: getCampaignPerformance(c) }))
-        .sort((a, b) => (campaignMetric === "gmv" ? b.perf.transactionValue - a.perf.transactionValue : b.perf.roi - a.perf.roi))
+      rankedCampaigns
+        .filter(({ campaign }) => campaign.id !== topEntry?.campaign.id)
         .map(({ campaign, perf }) => ({
           id: campaign.id,
-          label: campaign.name,
-          value: campaignMetric === "gmv" ? perf.transactionValue : perf.roi,
+          name: campaign.name,
+          status: campaign.status,
+          gmv: perf.transactionValue,
+          transactions: perf.transactions,
+          roi: perf.roi,
+          cashback: perf.cashbackIssued,
+          utilizationPct: perf.utilizationPct,
         })),
-    [performanceCampaigns, campaignMetric]
+    [rankedCampaigns, topEntry]
   )
 
   const chartMetricValue = { gmv: current.transactionValue, transactions: current.transactions, cashback: current.cashbackIssued, roi: current.roi, aov: current.avgTransactionValue }[chartMetric]
   const chartMetricPrev = { gmv: previous.transactionValue, transactions: previous.transactions, cashback: previous.cashbackIssued, roi: previous.roi, aov: previous.avgTransactionValue }[chartMetric]
-  const chartCaption = trendCaption(CHART_METRIC_OPTIONS.find((o) => o.value === chartMetric)?.label ?? "GMV", percentChange(chartMetricValue, chartMetricPrev))
+  const chartCaption = trendCaption(BRAND_CHART_OPTIONS.find((o) => o.value === chartMetric)?.label ?? "GMV", percentChange(chartMetricValue, chartMetricPrev))
 
   function handleDownloadReport() {
     downloadCsv(
@@ -139,15 +161,15 @@ export default function BrandAnalytics() {
   return (
     <div>
       <PageHeader
-        breadcrumb={[{ label: "Merchant Analytics", to: "/analytics" }, { label: brand.name }]}
+        breadcrumb={[{ label: "Analytics" }]}
         title={
           <>
             <BrandLogoTile initials={brand.logoInitials} color={brand.logoColor} />
             {brand.name}
           </>
         }
-        description={`${MERCHANT.name} · ${brand.website}`}
-        meta={<span>{allCampaigns.length} campaigns total</span>}
+        description={`Performance and customer insights for ${brand.name}.`}
+        meta={<span>{allCampaigns.length} campaigns total · {MERCHANT.name}</span>}
         showPrototypeTag
         actions={
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadReport}>
@@ -157,6 +179,19 @@ export default function BrandAnalytics() {
         }
       />
 
+      {/* Brand switcher — the primary context for this entire page. Every brand's analytics live
+          at this same page shape; picking one here swaps the content below rather than opening a
+          separate detail page. */}
+      <Tabs value={brand.id} onValueChange={(id) => navigate(`/analytics/brands/${id}`)} className="mb-6">
+        <TabsList>
+          {BRANDS.map((b) => (
+            <TabsTrigger key={b.id} value={b.id}>
+              {b.name}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       <FilterBar filters={filters} onChange={setFilters} showBrand={false} showCampaignSearch />
 
       {filteredCampaigns.length === 0 ? (
@@ -165,11 +200,11 @@ export default function BrandAnalytics() {
         </div>
       ) : (
         <>
-          {/* 1. Brand Overview */}
+          {/* 1. Brand Overview — three headline metrics, three lighter supporting ones */}
           <KpiGrid>
             <KpiCard
               icon={<TrendingUp className="size-4" />}
-              label="GMV"
+              label="Total GMV"
               value={formatAed(current.transactionValue)}
               deltaPct={percentChange(current.transactionValue, previous.transactionValue)}
               hint={periodLabel}
@@ -186,70 +221,102 @@ export default function BrandAnalytics() {
               showTierBadge={false}
             />
             <KpiCard
+              icon={<Target className="size-4" />}
+              label="ROI"
+              value={formatRatio(current.roi)}
+              deltaPct={percentChange(current.roi, previous.roi)}
+              hint={periodLabel}
+              tier="transaction"
+              showTierBadge={false}
+            />
+            <KpiCard
               icon={<Coins className="size-4" />}
-              label="Cashback"
+              label="Cashback Issued"
               value={formatAed(current.cashbackIssued)}
               deltaPct={percentChange(current.cashbackIssued, previous.cashbackIssued)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
+              size="md"
             />
-            <KpiCard icon={<Target className="size-4" />} label="ROI" value={formatRatio(current.roi)} deltaPct={percentChange(current.roi, previous.roi)} hint={periodLabel} tier="transaction" showTierBadge={false} />
-            <KpiCard icon={<Users className="size-4" />} label="Customers" value={formatNumber(cohortPerf.customersTransacted)} hint={periodLabel} tier="transaction" showTierBadge={false} />
-            <KpiCard icon={<Megaphone className="size-4" />} label="Active Campaigns" value={formatNumber(activeCampaigns)} hint="In this range" tier="live" />
+            <KpiCard
+              icon={<Users className="size-4" />}
+              label="Customers"
+              value={formatNumber(cohortPerf.customersTransacted)}
+              deltaPct={percentChange(cohortPerf.customersTransacted, previousCohortPerf.customersTransacted)}
+              hint={periodLabel}
+              tier="transaction"
+              showTierBadge={false}
+              size="md"
+            />
+            <KpiCard
+              label="Avg. Transaction Value"
+              value={formatAed(current.avgTransactionValue)}
+              deltaPct={percentChange(current.avgTransactionValue, previous.avgTransactionValue)}
+              hint={periodLabel}
+              tier="transaction"
+              showTierBadge={false}
+              size="md"
+            />
           </KpiGrid>
           <p className="mt-2 text-xs text-muted-foreground">
             Transaction and cashback figures are prototype estimates — they require transaction/settlement data. Change is versus the equivalent prior period.
           </p>
 
-          {/* 2. Cashback & Spend Over Time */}
+          {/* 2. Brand Performance */}
           <section className="mt-12">
             <SectionCard
-              title="Cashback & Spend Over Time"
+              title="Brand Performance"
               description="Is this brand's performance improving or declining?"
               contentClassName="pt-2"
-              actions={<MetricToggle value={chartMetric} onChange={setChartMetric} />}
+              actions={<PillToggle value={chartMetric} onChange={setChartMetric} options={BRAND_CHART_OPTIONS} />}
             >
               <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
               {chartCaption && <p className="mt-3 border-t border-border/70 px-1 pt-4 text-xs text-muted-foreground">{chartCaption}</p>}
             </SectionCard>
           </section>
 
-          {/* 3. Engagement Funnel */}
-          <section className="mt-12">
-            <SectionCard title="Engagement Funnel" description="From offer shown to cashback rewarded">
-              <EngagementFunnel perf={cohortPerf} />
-            </SectionCard>
-          </section>
-
-          {/* 4. Campaign Performance — which campaign generates this brand's GMV? */}
+          {/* 3. Top Campaign — a single visual highlight, not another ranked list */}
           <section className="mt-12">
             <SectionCard
-              title="Campaign Performance"
-              description="Live and completed campaigns for this brand. Click one to open its analytics."
-              actions={<PillToggle value={campaignMetric} onChange={setCampaignMetric} options={CAMPAIGN_METRIC_OPTIONS} />}
+              title="Top Campaign"
+              description="This brand's strongest campaign by the selected metric"
+              actions={<PillToggle value={topMetric} onChange={setTopMetric} options={TOP_CAMPAIGN_OPTIONS} />}
             >
-              <RankedBarList
-                items={rankedCampaigns}
-                formatValue={campaignMetric === "gmv" ? formatAed : (v) => formatRatio(v)}
-                onSelect={(id) => navigate(`/analytics/campaigns/${id}`)}
-              />
+              {topEntry ? (
+                <TopCampaignCard
+                  name={topEntry.campaign.name}
+                  status={topEntry.campaign.status}
+                  perf={topEntry.perf}
+                  metric={topMetric}
+                  onSelect={() => navigate(`/analytics/campaigns/${topEntry.campaign.id}`)}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">No active or completed campaigns in this range yet.</p>
+              )}
             </SectionCard>
-            <Card className="mt-4">
-              <CardContent className="p-5">
-                <CampaignComparisonTable campaigns={performanceCampaigns} />
-              </CardContent>
-            </Card>
           </section>
 
-          {/* 5. Customer Demographics — who is responding? */}
+          {/* 4. Campaign Performance — the detailed comparison, excluding the campaign already featured above */}
+          <section className="mt-12">
+            <SectionCard title="Campaign Performance" description="Every other live and completed campaign for this brand. Sort a column, or click a row to open it.">
+              <CampaignPerformanceTable rows={campaignRows} onSelect={(id) => navigate(`/analytics/campaigns/${id}`)} />
+            </SectionCard>
+          </section>
+
+          {/* 5. Customer Insights */}
+          <section className="mt-12">
+            <SectionCard title="Customer Insights" description="Who this brand's campaigns are reaching and converting">
+              <CustomerImpactStats perf={cohortPerf} />
+            </SectionCard>
+          </section>
+
           <section className="mt-12">
             <SectionCard title="Customer Demographics" description="Age and gender breakdown of customers reached">
               <CustomerDemographicsPanel demographics={demographics} />
             </SectionCard>
           </section>
 
-          {/* 6 + 8. Customer Value + Purchase Frequency — paired, both compact purchase-pattern views */}
           <section className="mt-12 grid gap-6 lg:grid-cols-2">
             <SectionCard title="Customer Value" description="How much customers spend, in total, across all campaigns">
               <CustomerValuePanel buckets={valueBuckets} />
@@ -259,28 +326,19 @@ export default function BrandAnalytics() {
             </SectionCard>
           </section>
 
-          {/* 7. New vs. Returning Customers */}
           <section className="mt-12">
             <SectionCard title="New vs. Returning Customers" description="Acquisition vs. retention, and how each segment's value compares">
               <NewReturningPanel stats={newReturningStats} />
             </SectionCard>
           </section>
 
-          {/* 9. Top Merchant IDs */}
+          {/* 6. Channel / Engagement Insights */}
           <section className="mt-12">
-            <SectionCard title="Top Merchant IDs" description="Highest-performing Merchant IDs across this brand's campaigns">
-              <MidPerformancePanel mids={midStats} />
+            <SectionCard title="Engagement" description="Aggregate customer engagement across this brand's campaigns, from offer shown to cashback rewarded">
+              <EngagementFunnel perf={cohortPerf} />
             </SectionCard>
           </section>
 
-          {/* 10. Location / Store Performance */}
-          <section className="mt-12">
-            <SectionCard title="Location Performance" description="This brand's strongest locations, by GMV">
-              <LocationPerformanceTable locations={locationStats} />
-            </SectionCard>
-          </section>
-
-          {/* 11 + 12. Channel Behaviour + Why Transactions Didn't Qualify — paired */}
           <section className="mt-12 grid gap-6 lg:grid-cols-2">
             <SectionCard title="Channel Behaviour" description="Online vs. in-store, compared">
               <ChannelBehaviourPanel stats={channelStats} metrics={["gmv", "customers", "aov", "repeatRate"]} />
@@ -290,10 +348,13 @@ export default function BrandAnalytics() {
             </SectionCard>
           </section>
 
-          {/* 13. Recent Transactions */}
-          <section className="mt-12">
-            <SectionCard title="Recent Transactions" description="Individual transactions behind the numbers above" contentClassName="px-5 pb-5">
-              <TransactionSection rows={transactionRows} showCampaign />
+          {/* Secondary operational detail — useful, but not primary at brand level; the deeper cut lives on Campaign Analytics */}
+          <section className="mt-12 grid gap-6 lg:grid-cols-2">
+            <SectionCard title="Top Merchant IDs" description="Highest-performing Merchant IDs across this brand's campaigns">
+              <MidPerformancePanel mids={midStats} />
+            </SectionCard>
+            <SectionCard title="Location Performance" description="This brand's strongest locations, by GMV">
+              <LocationPerformanceTable locations={locationStats} />
             </SectionCard>
           </section>
         </>

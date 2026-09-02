@@ -1,4 +1,4 @@
-import { formatAed, formatCompactAed, formatPercent, formatRatio } from "./utils"
+import { formatCompactAed, formatPercent, formatRatio } from "./utils"
 import { getPacingStatus } from "./analytics-utils"
 import type { QualificationBucket, WeekdayPoint } from "./mock-performance"
 
@@ -10,62 +10,6 @@ function topQualificationReason(buckets: QualificationBucket[]): { reason: strin
   if (total === 0) return null
   const top = [...buckets].sort((a, b) => b.count - a.count)[0]
   return { reason: top.reason, sharePct: (top.count / total) * 100 }
-}
-
-// ---------------------------------------------------------------------------
-// Performance Insights — Merchant Analytics. "Which brands, and where should I look next?"
-// Every rule compares brands directly against each other, mirroring the Brand Performance
-// and Campaign Performance comparison tables on the same page.
-// ---------------------------------------------------------------------------
-
-export function generatePortfolioInsights(input: { brands: { name: string; gmv: number; roi: number; utilizationPct: number }[] }): Insight[] {
-  const insights: Insight[] = []
-  const active = input.brands.filter((b) => b.gmv > 0)
-  if (active.length === 0) return insights
-
-  const topGmv = [...active].sort((a, b) => b.gmv - a.gmv)[0]
-  insights.push({
-    id: "top-performer",
-    tone: "positive",
-    title: "Top performer",
-    description: `${topGmv.name} generated the highest GMV at ${formatAed(topGmv.gmv)}.`,
-  })
-
-  const topRoi = [...active].sort((a, b) => b.roi - a.roi)[0]
-  if (topRoi) {
-    insights.push({
-      id: "highest-roi",
-      tone: "positive",
-      title: "Highest ROI",
-      description: `${topRoi.name} delivered the strongest ROI at ${formatRatio(topRoi.roi)}.`,
-    })
-  }
-
-  // Excludes the brand already called out above (as GMV or ROI leader) so this doesn't just repeat one of them.
-  const avgRoi = active.reduce((s, b) => s + b.roi, 0) / active.length
-  const growth = [...active]
-    .filter((b) => b.name !== topGmv.name && b.name !== topRoi?.name && b.roi > avgRoi && b.gmv < topGmv.gmv * 0.6)
-    .sort((a, b) => b.roi - a.roi)[0]
-  if (growth) {
-    insights.push({
-      id: "growth-opportunity",
-      tone: "neutral",
-      title: "Growth opportunity",
-      description: `${growth.name} has strong ROI (${formatRatio(growth.roi)}) but significantly lower GMV than the top brands.`,
-    })
-  }
-
-  const mostUtilized = [...active].sort((a, b) => b.utilizationPct - a.utilizationPct)[0]
-  if (mostUtilized && mostUtilized.utilizationPct >= 40) {
-    insights.push({
-      id: "budget-attention",
-      tone: mostUtilized.utilizationPct >= 80 ? "warning" : "neutral",
-      title: "Budget attention",
-      description: `${mostUtilized.name} has used ${formatPercent(mostUtilized.utilizationPct, 0)} of its campaign budget while generating ${formatAed(mostUtilized.gmv)} in GMV.`,
-    })
-  }
-
-  return insights.slice(0, 4)
 }
 
 // ---------------------------------------------------------------------------

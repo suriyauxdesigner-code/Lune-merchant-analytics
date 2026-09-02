@@ -118,7 +118,7 @@ export default function CampaignAnalytics() {
     <div>
       {/* 1. Campaign Header */}
       <PageHeader
-        breadcrumb={[{ label: "Merchant Analytics", to: "/analytics" }, { label: brand.name, to: `/analytics/brands/${brand.id}` }, { label: campaign.name }]}
+        breadcrumb={[{ label: "Analytics", to: `/analytics/brands/${brand.id}` }, { label: brand.name, to: `/analytics/brands/${brand.id}` }, { label: campaign.name }]}
         title={
           <>
             {campaign.name}

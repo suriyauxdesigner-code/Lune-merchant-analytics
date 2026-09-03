@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useParams, Link } from "react-router-dom"
-import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Clock, CalendarDays, TrendingUp, Receipt, Coins, Target, Users, BarChart3, Megaphone as MegaphoneIcon } from "lucide-react"
+import { Building2, Clock, CalendarDays, TrendingUp, Receipt, Coins, Target, Users, BarChart3, Megaphone as MegaphoneIcon } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard, KpiGrid } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
@@ -126,7 +126,6 @@ export default function CampaignAnalytics() {
             <StatusBadge status={campaign.status} />
           </>
         }
-        showPrototypeTag
         meta={
           <>
             <span className="flex items-center gap-1.5">
@@ -147,26 +146,6 @@ export default function CampaignAnalytics() {
           </>
         }
       />
-
-      {/* Secondary metadata — the campaign's own configuration, kept visually quiet so it doesn't compete with the KPIs below */}
-      <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <Percent className="size-3.5" />
-          {campaign.cashbackPercentage}% cashback
-        </span>
-        <span className="flex items-center gap-1.5">
-          <Wallet className="size-3.5" />
-          {formatAed(campaign.budget)} budget
-        </span>
-        <span className="flex items-center gap-1.5">
-          <ArrowDownToLine className="size-3.5" />
-          {campaign.minimumSpend ? `${formatAed(campaign.minimumSpend)} minimum spend` : "No minimum spend"}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <ShieldCheck className="size-3.5" />
-          {formatAed(campaign.cashbackCap)} cashback cap
-        </span>
-      </div>
 
       {/* Campaign Overview — the same six core performance KPIs as Brand Analytics, all equal weight.
           Budget Used / Budget Remaining are intentionally not here — they're secondary to core

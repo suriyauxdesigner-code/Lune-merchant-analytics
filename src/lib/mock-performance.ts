@@ -89,7 +89,14 @@ export type ChannelPerf = {
   roi: number
 }
 
-export type QualificationReason = "Minimum spend not met" | "Outside campaign period" | "Transaction from an unconfigured terminal" | "Other"
+export type QualificationReason =
+  | "Minimum spend not met"
+  | "Customer not activated for this offer"
+  | "Per-customer cashback cap reached"
+  | "Transaction from an unconfigured terminal"
+  | "Card not eligible for this offer"
+  | "Customer outside the target segment"
+  | "Campaign budget exhausted"
 
 export type QualificationBucket = { reason: QualificationReason; count: number }
 
@@ -128,9 +135,12 @@ export type CampaignPerformance = {
 
 const ZERO_QUALIFICATION: QualificationBucket[] = [
   { reason: "Minimum spend not met", count: 0 },
-  { reason: "Outside campaign period", count: 0 },
+  { reason: "Customer not activated for this offer", count: 0 },
+  { reason: "Per-customer cashback cap reached", count: 0 },
   { reason: "Transaction from an unconfigured terminal", count: 0 },
-  { reason: "Other", count: 0 },
+  { reason: "Card not eligible for this offer", count: 0 },
+  { reason: "Customer outside the target segment", count: 0 },
+  { reason: "Campaign budget exhausted", count: 0 },
 ]
 
 const ZERO_PERF: Omit<CampaignPerformance, "hasStarted"> = {
@@ -228,20 +238,27 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
   const returningCustomers = customersTransacted - newCustomers
   const repeatPurchaseRate = customersTransacted > 0 ? returningCustomers / customersTransacted : 0
 
-  // Qualification — attempted transactions that didn't clear the campaign's own rules
-  // (minimum spend, active window, merchant/terminal registration). Derived from the
-  // same transaction count so it scales with actual campaign activity.
+  // Qualification — attempted transactions that didn't clear the campaign's own rules (minimum
+  // spend, offer activation, per-customer cap, terminal/card/segment eligibility, budget).
+  // Derived from the same transaction count so it scales with actual campaign activity. Each
+  // reason gets an independent seeded weight, normalized against the others, rather than a fixed
+  // percentage — so the mix of reasons varies realistically from campaign to campaign instead of
+  // every campaign failing for the same reasons in the same proportions.
   const disqualifiedCount = Math.round(transactions * seeded(id, 13, 0.08, 0.22))
-  const minSpendShare = seeded(id, 14, 0.38, 0.55)
-  const outsidePeriodShare = seeded(id, 15, 0.14, 0.26)
-  const invalidTerminalShare = seeded(id, 16, 0.08, 0.18)
-  const otherShare = Math.max(0, 1 - minSpendShare - outsidePeriodShare - invalidTerminalShare)
-  const qualification: QualificationBucket[] = [
-    { reason: "Minimum spend not met", count: Math.round(disqualifiedCount * minSpendShare) },
-    { reason: "Outside campaign period", count: Math.round(disqualifiedCount * outsidePeriodShare) },
-    { reason: "Transaction from an unconfigured terminal", count: Math.round(disqualifiedCount * invalidTerminalShare) },
-    { reason: "Other", count: Math.round(disqualifiedCount * otherShare) },
+  const qualificationWeights: [QualificationReason, number][] = [
+    ["Minimum spend not met", seeded(id, 14, 30, 48)],
+    ["Customer not activated for this offer", seeded(id, 20, 18, 30)],
+    ["Per-customer cashback cap reached", seeded(id, 21, 10, 20)],
+    ["Transaction from an unconfigured terminal", seeded(id, 16, 6, 14)],
+    ["Card not eligible for this offer", seeded(id, 22, 4, 10)],
+    ["Customer outside the target segment", seeded(id, 23, 3, 8)],
+    ["Campaign budget exhausted", seeded(id, 24, 1, 5)],
   ]
+  const qualificationWeightTotal = qualificationWeights.reduce((s, [, w]) => s + w, 0)
+  const qualification: QualificationBucket[] = qualificationWeights.map(([reason, weight]) => ({
+    reason,
+    count: Math.round(disqualifiedCount * (weight / qualificationWeightTotal)),
+  }))
 
   const channelSplit = campaign.channel === "both" ? buildChannelSplit(id, { transactions, transactionValue, cashbackIssued, avgTransactionValue, utilizationPct }) : null
 

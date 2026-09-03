@@ -2,19 +2,29 @@ import { Info } from "lucide-react"
 import { formatNumber } from "@/lib/utils"
 import type { QualificationBucket, QualificationReason } from "@/lib/mock-performance"
 
-const COLORS = ["hsl(38 92% 42%)", "hsl(217 91% 45%)", "hsl(0 72% 51%)", "hsl(220 9% 55%)"]
+const COLORS = ["hsl(38 92% 42%)", "hsl(217 91% 45%)", "hsl(0 72% 51%)", "hsl(266 65% 58%)", "hsl(340 70% 50%)", "hsl(152 55% 34%)", "hsl(220 9% 55%)"]
 
 // Reason → plain-language meaning, always visible, and an actionable tip where one genuinely
-// exists. "Other" has neither — there's nothing meaningful to explain or recommend.
+// exists — every reason here is something a merchant can actually investigate or adjust, so all
+// seven currently have both.
 const MEANING: Partial<Record<QualificationReason, string>> = {
   "Minimum spend not met": "The transaction was below this campaign's minimum spend requirement.",
-  "Outside campaign period": "The transaction occurred outside the campaign's active period.",
+  "Customer not activated for this offer": "The customer hadn't activated this cashback offer before completing the transaction.",
+  "Per-customer cashback cap reached": "This customer had already earned the maximum cashback allowed per customer on this campaign.",
   "Transaction from an unconfigured terminal": "This transaction occurred at a payment terminal that isn't linked to the campaign.",
+  "Card not eligible for this offer": "The card used isn't within this offer's eligible card range.",
+  "Customer outside the target segment": "This customer isn't part of the audience segment this campaign targets.",
+  "Campaign budget exhausted": "The campaign's allocated budget had already been fully spent when this transaction occurred.",
 }
 
 const TIP: Partial<Record<QualificationReason, string>> = {
   "Minimum spend not met": "Consider lowering the minimum spend threshold to increase the number of eligible transactions.",
+  "Customer not activated for this offer": "Consider prompting customers to activate the offer earlier in their journey, or simplifying the activation step.",
+  "Per-customer cashback cap reached": "Consider raising the per-customer cashback cap if you want repeat customers to keep earning on this offer.",
   "Transaction from an unconfigured terminal": "Check that all terminals are correctly linked to this campaign.",
+  "Card not eligible for this offer": "Check that the offer's eligible card list covers the card ranges your customers actually use.",
+  "Customer outside the target segment": "Consider widening this campaign's target audience if a large share of attempted transactions fall outside it.",
+  "Campaign budget exhausted": "Consider topping up the campaign budget to keep rewarding eligible transactions.",
 }
 
 /**
@@ -27,6 +37,7 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
   const rejected = buckets.reduce((s, b) => s + b.count, 0)
   const total = rejected || 1
   const attempted = qualified != null ? qualified + rejected : null
+  const sortedBuckets = [...buckets].sort((a, b) => b.count - a.count)
 
   return (
     <div>
@@ -47,7 +58,7 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
         </div>
       )}
       <div className="space-y-5">
-        {buckets.map((bucket, i) => {
+        {sortedBuckets.map((bucket, i) => {
           const pct = Math.round((bucket.count / total) * 100)
           const meaning = MEANING[bucket.reason]
           const tip = TIP[bucket.reason]

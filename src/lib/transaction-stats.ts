@@ -76,10 +76,11 @@ export function computeLocationStats(rows: TransactionRow[], customerRatio: numb
     .sort((a, b) => b.gmv - a.gmv)
 }
 
-export type TerminalStat = { terminalName: string; mid: string | null; transactions: number; gmv: number; cashback: number; qualificationRate: number }
+export type TerminalStat = { terminalName: string; terminalId: string | null; mid: string | null; transactions: number; gmv: number; cashback: number; qualificationRate: number }
 
-/** Per-terminal breakdown including a modeled qualification rate — used to spot operational issues (high volume, low qualification). */
-export function computeTerminalStats(rows: TransactionRow[]): TerminalStat[] {
+/** Per-location breakdown (keyed by the registered terminal) including a modeled qualification rate — used to spot operational issues (high volume, low qualification). */
+export function computeTerminalStats(rows: TransactionRow[], brandId: string): TerminalStat[] {
+  const terminalIdByName = new Map(terminalsForBrand(brandId).map((t) => [t.terminalName, t.terminalId]))
   const byTerminal = new Map<string, { mid: string | null; transactions: number; gmv: number; cashback: number }>()
   for (const row of rows) {
     const existing = byTerminal.get(row.terminalName)
@@ -94,6 +95,7 @@ export function computeTerminalStats(rows: TransactionRow[]): TerminalStat[] {
   return [...byTerminal.entries()]
     .map(([terminalName, v]) => ({
       terminalName,
+      terminalId: terminalIdByName.get(terminalName) ?? null,
       mid: v.mid,
       transactions: v.transactions,
       gmv: v.gmv,

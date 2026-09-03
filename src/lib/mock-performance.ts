@@ -89,7 +89,7 @@ export type ChannelPerf = {
   roi: number
 }
 
-export type QualificationReason = "Minimum spend not met" | "Outside campaign period" | "Invalid merchant/terminal" | "Other"
+export type QualificationReason = "Minimum spend not met" | "Outside campaign period" | "Terminal not configured for this campaign" | "Other"
 
 export type QualificationBucket = { reason: QualificationReason; count: number }
 
@@ -129,7 +129,7 @@ export type CampaignPerformance = {
 const ZERO_QUALIFICATION: QualificationBucket[] = [
   { reason: "Minimum spend not met", count: 0 },
   { reason: "Outside campaign period", count: 0 },
-  { reason: "Invalid merchant/terminal", count: 0 },
+  { reason: "Terminal not configured for this campaign", count: 0 },
   { reason: "Other", count: 0 },
 ]
 
@@ -239,7 +239,7 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
   const qualification: QualificationBucket[] = [
     { reason: "Minimum spend not met", count: Math.round(disqualifiedCount * minSpendShare) },
     { reason: "Outside campaign period", count: Math.round(disqualifiedCount * outsidePeriodShare) },
-    { reason: "Invalid merchant/terminal", count: Math.round(disqualifiedCount * invalidTerminalShare) },
+    { reason: "Terminal not configured for this campaign", count: Math.round(disqualifiedCount * invalidTerminalShare) },
     { reason: "Other", count: Math.round(disqualifiedCount * otherShare) },
   ]
 

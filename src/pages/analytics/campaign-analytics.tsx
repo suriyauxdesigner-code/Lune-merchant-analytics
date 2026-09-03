@@ -16,7 +16,6 @@ import { OfferEconomicsPanel } from "@/components/analytics/offer-economics-pane
 import { ChannelBehaviourPanel } from "@/components/analytics/channel-behaviour-panel"
 import { PurchaseBehaviourPanel } from "@/components/analytics/purchase-behaviour-panel"
 import { HeatmapGrid } from "@/components/analytics/heatmap-grid"
-import { MidPerformancePanel } from "@/components/analytics/mid-performance-panel"
 import { MidQualificationScatter } from "@/components/analytics/mid-qualification-scatter"
 import { TerminalPerformancePanel } from "@/components/analytics/terminal-performance-panel"
 import { CustomerDemographicsPanel } from "@/components/analytics/customer-demographics-panel"
@@ -44,8 +43,8 @@ const CAMPAIGN_CHART_METRICS: ChartMetric[] = ["gmv", "transactions", "cashback"
 /**
  * Campaign Analytics — "Is this campaign working, why, and what should I change?" Campaign +
  * operational intelligence: the deepest, most granular level. Everything here is scoped to a
- * single campaign, down to its Merchant IDs and terminals — questions that don't make sense one
- * or two levels up, where "which campaign" hasn't been answered yet.
+ * single campaign, down to its physical locations — questions that don't make sense one or two
+ * levels up, where "which campaign" hasn't been answered yet.
  */
 export default function CampaignAnalytics() {
   const { campaignId = "" } = useParams()
@@ -67,7 +66,7 @@ export default function CampaignAnalytics() {
   const amountDistribution = React.useMemo(() => computeAmountDistribution(transactionRows), [transactionRows])
   const offerEconomics = React.useMemo(() => (campaign ? computeOfferEconomics(transactionRows, campaign) : null), [transactionRows, campaign])
   const midStats = React.useMemo(() => (campaign ? computeMidStats(transactionRows, campaign.brandId) : []), [transactionRows, campaign])
-  const terminalStats = React.useMemo(() => computeTerminalStats(transactionRows), [transactionRows])
+  const terminalStats = React.useMemo(() => (campaign ? computeTerminalStats(transactionRows, campaign.brandId) : []), [transactionRows, campaign])
   const channelStats = React.useMemo(() => computeChannelBehavior(transactionRows), [transactionRows])
   const demographics = React.useMemo(() => (campaign ? aggregateDemographics([campaign]) : null), [campaign])
   const newReturningStats = React.useMemo(() => (campaign ? getNewReturningStats([campaign]) : []), [campaign])
@@ -115,7 +114,7 @@ export default function CampaignAnalytics() {
 
   return (
     <div>
-      {/* 1. Campaign Header */}
+      {/* Header */}
       <PageHeader
         breadcrumb={[{ label: "Analytics", to: `/analytics/brands/${brand.id}` }, { label: brand.name, to: `/analytics/brands/${brand.id}` }, { label: campaign.name }]}
         title={
@@ -166,19 +165,24 @@ export default function CampaignAnalytics() {
         </span>
       </div>
 
-      {/* 2. Campaign Health */}
+      {/* Campaign Overview — GMV, Transactions, ROI lead; budget/AOV detail is secondary */}
       <KpiGrid>
         <KpiCard icon={<TrendingUp className="size-4" />} label="GMV" value={formatAed(perf.transactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
         <KpiCard icon={<Receipt className="size-4" />} label="Transactions" value={formatNumber(perf.transactions)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
         <KpiCard icon={<Target className="size-4" />} label="ROI" value={formatRatio(perf.roi)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Gauge className="size-4" />} label="Budget Used" value={formatPercent(perf.utilizationPct)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} size="md" />
+        <KpiCard icon={<Gauge className="size-4" />} label="Budget Used" value={formatPercent(perf.utilizationPct)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} size="md" />
+        <KpiCard icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} size="md" />
+        <KpiCard icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} size="md" />
       </KpiGrid>
 
-      {/* 3. Budget Pacing — how quickly is this campaign consuming its budget? */}
+      {/* Campaign Performance — trend, funnel, timing, and where it happened */}
       <section className="mt-12">
+        <div className="mb-5">
+          <h2 className="text-lg font-bold text-foreground">Campaign Performance</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Pacing, trend, conversion, and where this campaign is winning</p>
+        </div>
+
         <SectionCard title="Budget Pacing" description="Burn rate and forecast exhaustion for this campaign">
           <BudgetPacingPanel
             budget={campaign.budget}
@@ -188,84 +192,74 @@ export default function CampaignAnalytics() {
             estimatedExhaustionDate={perf.estimatedExhaustionDate}
           />
         </SectionCard>
-      </section>
 
-      {/* 4. Campaign Performance Over Time */}
-      <section className="mt-12">
-        <SectionCard
-          title="Campaign Performance Over Time"
-          description="Campaign performance across its active duration"
-          contentClassName="pt-2"
-          actions={<MetricToggle value={chartMetric} onChange={setChartMetric} metrics={CAMPAIGN_CHART_METRICS} />}
-        >
-          <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
-        </SectionCard>
-      </section>
-
-      {/* 5. Campaign Conversion Funnel */}
-      <section className="mt-12">
-        <SectionCard title="Campaign Conversion Funnel" description="From offer shown to cashback rewarded">
-          <EngagementFunnel perf={perf} />
-        </SectionCard>
-      </section>
-
-      {/* 6. Top Merchant IDs */}
-      <section className="mt-12">
-        <SectionCard title="Top Merchant IDs" description="Merchant IDs contributing to this campaign">
-          <MidPerformancePanel mids={midStats} />
-        </SectionCard>
-      </section>
-
-      {/* 7 + 14. Merchant ID Qualification + Day/Time Performance — paired, both compact standalone visuals */}
-      <section className="mt-12 grid gap-6 lg:grid-cols-2">
-        {midStats.length > 1 && (
-          <SectionCard title="Merchant ID Qualification" description="Which MIDs qualify less than average, despite high volume">
-            <MidQualificationScatter mids={midStats} />
+        <div className="mt-6">
+          <SectionCard
+            title="Campaign Performance Over Time"
+            description="Campaign performance across its active duration"
+            contentClassName="pt-2"
+            actions={<MetricToggle value={chartMetric} onChange={setChartMetric} metrics={CAMPAIGN_CHART_METRICS} />}
+          >
+            <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
           </SectionCard>
-        )}
-        <SectionCard title="Day / Time Performance" description="GMV by day of week and time of day" className={midStats.length > 1 ? undefined : "lg:col-span-2"}>
-          <HeatmapGrid cells={heatmap} />
-        </SectionCard>
-      </section>
+        </div>
 
-      {/* 8. Terminal Performance */}
-      {terminalStats.length > 1 && (
-        <section className="mt-12">
-          <SectionCard title="Terminal Performance" description="Terminal IDs under this campaign's Merchant IDs">
+        <div className="mt-6">
+          <SectionCard title="Campaign Conversion Funnel" description="From offer shown to cashback rewarded">
+            <EngagementFunnel perf={perf} />
+          </SectionCard>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {midStats.length > 1 && (
+            <SectionCard title="Location Qualification" description="Which locations qualify less than average, despite high volume">
+              <MidQualificationScatter mids={midStats} />
+            </SectionCard>
+          )}
+          <SectionCard title="Day / Time Performance" description="GMV by day of week and time of day" className={midStats.length > 1 ? undefined : "lg:col-span-2"}>
+            <HeatmapGrid cells={heatmap} />
+          </SectionCard>
+        </div>
+
+        <div className="mt-6">
+          <SectionCard title="Location Performance" description="Which physical locations are driving this campaign">
             <TerminalPerformancePanel terminals={terminalStats} />
           </SectionCard>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {/* 9. Campaign Customer Demographics — who responded? */}
-      {demographics && (
-        <section className="mt-12">
-          <SectionCard title="Campaign Customer Demographics" description="Who responded to this campaign">
+      {/* Customer Insights — who responded to this specific campaign */}
+      <section className="mt-12">
+        <div className="mb-5">
+          <h2 className="text-lg font-bold text-foreground">Customer Insights</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Who responded to this campaign — scoped to this campaign alone, not the whole brand</p>
+        </div>
+
+        {demographics && (
+          <SectionCard title="Campaign Customer Demographics" description="Age and gender breakdown of customers who responded">
             <CustomerDemographicsPanel demographics={demographics} compact />
           </SectionCard>
-        </section>
-      )}
-
-      {/* 10 + 11. Demographic Performance + New vs. Returning — paired, both customer-segment views */}
-      <section className="mt-12 grid gap-6 lg:grid-cols-2">
-        {demographics && (
-          <SectionCard title="Demographic Performance" description="Which age segment performs best">
-            <DemographicPerformancePanel buckets={demographics.byAge} />
-          </SectionCard>
         )}
-        <SectionCard title="New vs. Returning" description="Acquisition vs. retention for this campaign" className={demographics ? undefined : "lg:col-span-2"}>
-          <NewReturningPanel stats={newReturningStats} />
-        </SectionCard>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {demographics && (
+            <SectionCard title="Demographic Performance" description="Which age segment performs best">
+              <DemographicPerformancePanel buckets={demographics.byAge} />
+            </SectionCard>
+          )}
+          <SectionCard title="New vs. Returning" description="Acquisition vs. retention for this campaign" className={demographics ? undefined : "lg:col-span-2"}>
+            <NewReturningPanel stats={newReturningStats} />
+          </SectionCard>
+        </div>
+
+        <div className="mt-6">
+          <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction">
+            <PurchaseBehaviourPanel stats={amountStats} distribution={amountDistribution} />
+          </SectionCard>
+        </div>
       </section>
 
-      {/* 12. Purchase Behaviour */}
-      <section className="mt-12">
-        <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction">
-          <PurchaseBehaviourPanel stats={amountStats} distribution={amountDistribution} />
-        </SectionCard>
-      </section>
-
-      {/* 13. Offer Economics — is the offer configuration itself working? */}
+      {/* Offer Economics — is the offer configuration itself working? */}
       {offerEconomics && (
         <section className="mt-12">
           <SectionCard title="Offer Economics" description="How the offer configuration is playing out in real behavior">
@@ -274,7 +268,7 @@ export default function CampaignAnalytics() {
         </section>
       )}
 
-      {/* 15 + 16. Channel Performance + Campaign Eligibility — paired */}
+      {/* Channel Performance + Campaign Eligibility */}
       <section className="mt-12 grid gap-6 lg:grid-cols-2">
         {hasChannelSplit && (
           <SectionCard title="Channel Performance" description="Online vs. in-store performance for this campaign">
@@ -286,7 +280,7 @@ export default function CampaignAnalytics() {
         </SectionCard>
       </section>
 
-      {/* 17. Campaign Insights */}
+      {/* Campaign Insights */}
       {insights.length > 0 && (
         <section className="mt-12">
           <SectionCard title="Campaign Insights" description="Data-driven takeaways for this campaign">
@@ -295,7 +289,7 @@ export default function CampaignAnalytics() {
         </section>
       )}
 
-      {/* 18. Transactions */}
+      {/* Transactions */}
       <section className="mt-12">
         <SectionCard title="Transactions" description="Individual transactions behind the numbers above" contentClassName="px-5 pb-5">
           <TransactionSection rows={transactionRows} showCampaign={false} />

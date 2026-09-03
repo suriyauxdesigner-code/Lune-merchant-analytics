@@ -28,75 +28,79 @@ export function FilterBar({
   const clear = () => onChange({ ...filters, brandId: "all", channel: "all", status: "all", campaignQuery: "" })
 
   return (
-    <div className="mb-8 flex flex-wrap items-center gap-2">
+    <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+      {/* Search → brand (if shown) → channel → status */}
+      <div className="flex flex-wrap items-center gap-2">
+        {showCampaignSearch && (
+          <div className="relative w-full max-w-[220px] sm:w-[180px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={filters.campaignQuery}
+              onChange={(e) => onChange({ ...filters, campaignQuery: e.target.value })}
+              placeholder="Search campaign"
+              className="pl-8"
+            />
+          </div>
+        )}
+
+        {showBrand && (
+          <Select value={filters.brandId} onValueChange={(brandId) => onChange({ ...filters, brandId: brandId as CampaignFilters["brandId"] })}>
+            <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectValue placeholder="All brands" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All brands</SelectItem>
+              {BRANDS.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        <Select value={filters.channel} onValueChange={(channel) => onChange({ ...filters, channel: channel as Channel | "all" })}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectValue placeholder="All channels" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All channels</SelectItem>
+            {(Object.keys(CHANNEL_LABEL) as Channel[]).map((c) => (
+              <SelectItem key={c} value={c}>
+                {CHANNEL_LABEL[c]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={filters.status} onValueChange={(status) => onChange({ ...filters, status: status as CampaignStatus | "all" })}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            {FILTERABLE_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {activeCount > 0 && (
+          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={clear}>
+            <X className="size-3.5" />
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {/* Date range — a separate control, not nested inside the filter group */}
       <DateRangeSelect
         value={filters.dateRange}
         customRange={filters.customRange}
         onChange={(dateRange, customRange) => onChange({ ...filters, dateRange, customRange })}
       />
-
-      {showCampaignSearch && (
-        <div className="relative w-full max-w-[220px] sm:w-[180px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={filters.campaignQuery}
-            onChange={(e) => onChange({ ...filters, campaignQuery: e.target.value })}
-            placeholder="Search campaign"
-            className="pl-8"
-          />
-        </div>
-      )}
-
-      {showBrand && (
-        <Select value={filters.brandId} onValueChange={(brandId) => onChange({ ...filters, brandId: brandId as CampaignFilters["brandId"] })}>
-          <SelectTrigger className="w-full sm:w-[150px]">
-            <SelectValue placeholder="All brands" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All brands</SelectItem>
-            {BRANDS.map((b) => (
-              <SelectItem key={b.id} value={b.id}>
-                {b.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-
-      <Select value={filters.channel} onValueChange={(channel) => onChange({ ...filters, channel: channel as Channel | "all" })}>
-        <SelectTrigger className="w-full sm:w-[150px]">
-          <SelectValue placeholder="All channels" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All channels</SelectItem>
-          {(Object.keys(CHANNEL_LABEL) as Channel[]).map((c) => (
-            <SelectItem key={c} value={c}>
-              {CHANNEL_LABEL[c]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={filters.status} onValueChange={(status) => onChange({ ...filters, status: status as CampaignStatus | "all" })}>
-        <SelectTrigger className="w-full sm:w-[150px]">
-          <SelectValue placeholder="All statuses" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All statuses</SelectItem>
-          {FILTERABLE_STATUSES.map((s) => (
-            <SelectItem key={s} value={s}>
-              {STATUS_LABEL[s]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {activeCount > 0 && (
-        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={clear}>
-          <X className="size-3.5" />
-          Clear
-        </Button>
-      )}
     </div>
   )
 }

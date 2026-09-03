@@ -5,16 +5,25 @@ import type { QualificationBucket, QualificationReason } from "@/lib/mock-perfor
 
 const COLORS = ["hsl(38 92% 42%)", "hsl(217 91% 45%)", "hsl(0 72% 51%)", "hsl(220 9% 55%)"]
 
-const SUGGESTION: Partial<Record<QualificationReason, string>> = {
+// Reason → plain-language meaning, always visible, and an actionable tip where one genuinely
+// exists. "Other" has neither — there's nothing meaningful to explain or recommend.
+const MEANING: Partial<Record<QualificationReason, string>> = {
+  "Minimum spend not met": "The transaction was below this campaign's minimum spend requirement.",
+  "Outside campaign period": "The purchase happened before the campaign started or after it ended.",
+  "Terminal not configured for this campaign": "The purchase happened at a terminal that isn't registered to this campaign.",
+}
+
+const TIP: Partial<Record<QualificationReason, string>> = {
   "Minimum spend not met": "Consider lowering the minimum spend threshold to qualify more transactions.",
   "Outside campaign period": "Consider extending the campaign window to capture more eligible purchases.",
-  "Invalid merchant/terminal": "Check that all terminals are correctly registered to this campaign.",
+  "Terminal not configured for this campaign": "Check that all terminals are correctly registered to this campaign.",
 }
 
 /**
  * "Why didn't this transaction qualify" — helps a merchant spot optimization opportunities in
- * their own rules. `qualified` is optional: pass it (Campaign Analytics) to show the
- * attempted/qualified/rejected eligibility summary above the reason breakdown.
+ * their own rules. Each reason shows its meaning and, where one exists, an actionable tip
+ * directly in the body text — never only on hover. `qualified` is optional: pass it (Campaign
+ * Analytics) to show the attempted/qualified/rejected eligibility summary above the breakdown.
  */
 export function QualificationBreakdown({ buckets, qualified }: { buckets: QualificationBucket[]; qualified?: number }) {
   const rejected = buckets.reduce((s, b) => s + b.count, 0)
@@ -39,26 +48,15 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
           </div>
         </div>
       )}
-      <div className="space-y-3.5">
+      <div className="space-y-5">
         {buckets.map((bucket, i) => {
           const pct = Math.round((bucket.count / total) * 100)
-          const suggestion = SUGGESTION[bucket.reason]
+          const meaning = MEANING[bucket.reason]
+          const tip = TIP[bucket.reason]
           return (
             <div key={bucket.reason}>
               <div className="mb-1.5 flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1.5 font-medium text-foreground">
-                  {bucket.reason}
-                  {suggestion && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground hover:text-foreground">
-                          <Info className="size-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>{suggestion}</TooltipContent>
-                    </Tooltip>
-                  )}
-                </span>
+                <span className="font-semibold text-foreground">{bucket.reason}</span>
                 <span className="text-muted-foreground">
                   {formatNumber(bucket.count)} · {pct}%
                 </span>
@@ -66,6 +64,20 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }} />
               </div>
+              {meaning && <p className="mt-1.5 text-xs text-muted-foreground">{meaning}</p>}
+              {tip && (
+                <p className="mt-1 flex items-start gap-1 text-xs font-medium text-foreground">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="mt-0.5 shrink-0 text-muted-foreground">
+                        <Info className="size-3.5" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{tip}</TooltipContent>
+                  </Tooltip>
+                  Tip: {tip}
+                </p>
+              )}
             </div>
           )
         })}

@@ -12,7 +12,7 @@ const AT_ABOVE_AVG_COLOR = "hsl(160 62% 22%)"
  */
 export function MidQualificationScatter({ mids }: { mids: MidStat[] }) {
   const avgQualification = mids.length > 0 ? mids.reduce((s, m) => s + m.qualificationRate, 0) / mids.length : 0
-  const data = mids.map((m) => ({ ...m, isLow: m.qualificationRate < avgQualification - 5 }))
+  const data = mids.map((m) => ({ ...m, label: m.locations[0] ?? m.mid, isLow: m.qualificationRate < avgQualification - 5 }))
   const minRate = mids.length > 0 ? Math.min(...mids.map((m) => m.qualificationRate)) : 50
   const yFloor = Math.max(0, Math.floor((minRate - 10) / 10) * 10)
 
@@ -60,10 +60,11 @@ export function MidQualificationScatter({ mids }: { mids: MidStat[] }) {
               cursor={{ strokeDasharray: "3 3" }}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null
-                const d = payload[0].payload as MidStat
+                const d = payload[0].payload as MidStat & { label: string }
                 return (
                   <div className="rounded-[10px] border border-border bg-card px-3 py-2 text-xs shadow-card">
-                    <p className="font-semibold text-foreground">{d.mid}</p>
+                    <p className="font-semibold text-foreground">{d.label}</p>
+                    <p className="text-muted-foreground">{d.mid}</p>
                     <p className="mt-1 text-muted-foreground">
                       {formatNumber(d.transactions)} transactions · {formatPercent(d.qualificationRate, 0)} qualified
                     </p>
@@ -72,7 +73,7 @@ export function MidQualificationScatter({ mids }: { mids: MidStat[] }) {
               }}
             />
             <Scatter data={data}>
-              <LabelList dataKey="mid" position="top" style={{ fontSize: 10, fill: "hsl(220 20% 30%)", fontWeight: 600 }} />
+              <LabelList dataKey="label" position="top" style={{ fontSize: 10, fill: "hsl(220 20% 30%)", fontWeight: 600 }} />
               {data.map((d) => (
                 <Cell key={d.mid} fill={d.isLow ? BELOW_AVG_COLOR : AT_ABOVE_AVG_COLOR} />
               ))}

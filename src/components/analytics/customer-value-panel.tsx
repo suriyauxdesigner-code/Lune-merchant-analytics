@@ -24,7 +24,6 @@ export function CustomerValuePanel({ buckets }: { buckets: ValueBucket[] }) {
           )
         })}
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">Modeled from purchase count × average order value — requires customer-level spend history for a measured figure.</p>
     </div>
   )
 }

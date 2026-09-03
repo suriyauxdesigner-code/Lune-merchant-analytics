@@ -1,5 +1,5 @@
 import { seeded, type TransactionRow } from "./mock-performance"
-import { merchantIdsForBrand } from "./data"
+import { merchantIdsForBrand, terminalsForBrand } from "./data"
 import type { Campaign } from "./types"
 
 // ---------------------------------------------------------------------------
@@ -44,14 +44,16 @@ export function computeAmountDistribution(rows: TransactionRow[], bucketCount = 
   return buckets
 }
 
-export type LocationStat = { location: string; transactions: number; gmv: number; aov: number; customers: number }
+export type LocationStat = { location: string; terminalId: string | null; transactions: number; gmv: number; aov: number; customers: number }
 
 /**
  * GMV/transactions/AOV per terminal, derived directly from transaction rows. "Customers" is
  * estimated by applying the same transactions-to-unique-customers ratio used at the campaign
- * level (Pulse doesn't yet track a per-transaction customer identity).
+ * level (Pulse doesn't yet track a per-transaction customer identity). `terminalId` disambiguates
+ * the display name (e.g. "Mall of the Emirates") from the actual registered POS terminal.
  */
-export function computeLocationStats(rows: TransactionRow[], customerRatio: number): LocationStat[] {
+export function computeLocationStats(rows: TransactionRow[], customerRatio: number, brandId: string): LocationStat[] {
+  const terminalIdByName = new Map(terminalsForBrand(brandId).map((t) => [t.terminalName, t.terminalId]))
   const byLocation = new Map<string, { transactions: number; gmv: number }>()
   for (const row of rows) {
     const existing = byLocation.get(row.terminalName)
@@ -65,6 +67,7 @@ export function computeLocationStats(rows: TransactionRow[], customerRatio: numb
   return [...byLocation.entries()]
     .map(([location, v]) => ({
       location,
+      terminalId: terminalIdByName.get(location) ?? null,
       transactions: v.transactions,
       gmv: v.gmv,
       aov: v.transactions > 0 ? Math.round(v.gmv / v.transactions) : 0,
@@ -100,7 +103,18 @@ export function computeTerminalStats(rows: TransactionRow[]): TerminalStat[] {
     .sort((a, b) => b.gmv - a.gmv)
 }
 
-export type MidStat = { mid: string; acquirer: string; channel: string; transactions: number; gmv: number; aov: number; roi: number; qualificationRate: number }
+export type MidStat = {
+  mid: string
+  acquirer: string
+  channel: string
+  /** Human-readable terminal/store names registered under this Merchant ID — e.g. ["Mall of the Emirates", "faces.ae checkout"]. */
+  locations: string[]
+  transactions: number
+  gmv: number
+  aov: number
+  roi: number
+  qualificationRate: number
+}
 
 /** GMV/transactions/AOV/ROI per Merchant ID, derived from transaction rows, plus a modeled qualification rate. */
 export function computeMidStats(rows: TransactionRow[], brandId: string): MidStat[] {
@@ -117,13 +131,16 @@ export function computeMidStats(rows: TransactionRow[], brandId: string): MidSta
       byMid.set(row.mid, { transactions: 1, gmv: row.amount, cashback: row.cashback, channels: new Set([row.channel]) })
     }
   }
-  const acquirerByMid = new Map(merchantIdsForBrand(brandId).map((m) => [m.merchantId, m.acquirer]))
+  const merchantIds = merchantIdsForBrand(brandId)
+  const acquirerByMid = new Map(merchantIds.map((m) => [m.merchantId, m.acquirer]))
+  const locationsByMid = new Map(merchantIds.map((m) => [m.merchantId, m.terminals.map((t) => t.terminalName)]))
 
   return [...byMid.entries()]
     .map(([mid, v]) => ({
       mid,
       acquirer: acquirerByMid.get(mid) ?? "—",
       channel: [...v.channels].map((c) => (c === "online" ? "Online" : "In-Store")).join(" & "),
+      locations: locationsByMid.get(mid) ?? [],
       transactions: v.transactions,
       gmv: v.gmv,
       aov: v.transactions > 0 ? Math.round(v.gmv / v.transactions) : 0,

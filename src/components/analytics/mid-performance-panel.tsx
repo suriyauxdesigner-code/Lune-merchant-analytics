@@ -15,18 +15,19 @@ export function MidPerformancePanel({ mids }: { mids: MidStat[] }) {
   return (
     <div>
       <RankedBarList
-        items={top.map((m) => ({ id: m.mid, label: m.mid, value: m.gmv, sublabel: `${formatRatio(m.roi)} ROI` }))}
+        items={top.map((m) => ({ id: m.mid, label: m.locations.join(" · ") || m.mid, value: m.gmv, sublabel: `${formatRatio(m.roi)} ROI` }))}
         formatValue={formatAed}
       />
       {totalGmv > 0 && top[0] && (
         <p className="mt-3 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{top[0].mid}</span> contributes {formatPercent((top[0].gmv / totalGmv) * 100, 0)} of the GMV shown here.
+          <span className="font-medium text-foreground">{top[0].locations.join(" · ") || top[0].mid}</span> contributes {formatPercent((top[0].gmv / totalGmv) * 100, 0)} of the GMV shown here.
         </p>
       )}
       <div className="mt-5 border-t border-border pt-1">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Merchant</TableHead>
               <TableHead>Merchant ID</TableHead>
               <TableHead>Channel</TableHead>
               <TableHead>GMV</TableHead>
@@ -39,7 +40,8 @@ export function MidPerformancePanel({ mids }: { mids: MidStat[] }) {
           <TableBody>
             {mids.map((m) => (
               <TableRow key={m.mid}>
-                <TableCell className="font-medium text-foreground">{m.mid}</TableCell>
+                <TableCell className="font-medium text-foreground">{m.locations.join(" · ") || "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{m.mid}</TableCell>
                 <TableCell className="text-muted-foreground">{m.channel}</TableCell>
                 <TableCell className="text-foreground">{formatAed(m.gmv)}</TableCell>
                 <TableCell className="text-foreground">{formatNumber(m.transactions)}</TableCell>

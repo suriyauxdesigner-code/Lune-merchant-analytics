@@ -46,7 +46,7 @@ export function CustomerDemographicsPanel({ demographics, compact = false }: { d
       {topAge && (
         <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">{topAge.ageBand}</span> is the largest customer segment, contributing{" "}
-          {formatPercent(topAgeGmvShare, 0)} of GMV ({formatAed(topAge.gmv)}). Requires customer-level demographic data — shown here as prototype estimates.
+          {formatPercent(topAgeGmvShare, 0)} of GMV ({formatAed(topAge.gmv)}).
         </p>
       )}
     </div>

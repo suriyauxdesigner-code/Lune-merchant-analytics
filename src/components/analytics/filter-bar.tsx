@@ -1,13 +1,15 @@
-import * as React from "react"
-import { Search, SlidersHorizontal, X } from "lucide-react"
+import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DateRangeSelect } from "./date-range-select"
 import { BRANDS } from "@/lib/data"
 import { CHANNEL_LABEL, STATUS_LABEL, type CampaignFilters } from "@/lib/analytics-utils"
 import type { CampaignStatus, Channel } from "@/lib/types"
+
+// Only statuses relevant to a performance filter — Pending Approval, Scheduled, and Rejected
+// campaigns don't have performance to filter by.
+const FILTERABLE_STATUSES: CampaignStatus[] = ["active", "completed"]
 
 export function FilterBar({
   filters,
@@ -20,44 +22,10 @@ export function FilterBar({
   showBrand?: boolean
   showCampaignSearch?: boolean
 }) {
-  const [moreOpen, setMoreOpen] = React.useState(false)
-
-  const moreCount = [filters.channel !== "all", filters.status !== "all"].filter(Boolean).length
-  const activeCount = moreCount + (filters.brandId !== "all" ? 1 : 0) + (filters.campaignQuery.trim() !== "" ? 1 : 0)
+  const activeCount =
+    (filters.brandId !== "all" ? 1 : 0) + (filters.channel !== "all" ? 1 : 0) + (filters.status !== "all" ? 1 : 0) + (filters.campaignQuery.trim() !== "" ? 1 : 0)
 
   const clear = () => onChange({ ...filters, brandId: "all", channel: "all", status: "all", campaignQuery: "" })
-
-  const channelSelect = (
-    <Select value={filters.channel} onValueChange={(channel) => onChange({ ...filters, channel: channel as Channel | "all" })}>
-      <SelectTrigger>
-        <SelectValue placeholder="All channels" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All channels</SelectItem>
-        {(Object.keys(CHANNEL_LABEL) as Channel[]).map((c) => (
-          <SelectItem key={c} value={c}>
-            {CHANNEL_LABEL[c]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-
-  const statusSelect = (
-    <Select value={filters.status} onValueChange={(status) => onChange({ ...filters, status: status as CampaignStatus | "all" })}>
-      <SelectTrigger>
-        <SelectValue placeholder="All statuses" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All statuses</SelectItem>
-        {(Object.keys(STATUS_LABEL) as CampaignStatus[]).map((s) => (
-          <SelectItem key={s} value={s}>
-            {STATUS_LABEL[s]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
 
   return (
     <div className="mb-8 flex flex-wrap items-center gap-2">
@@ -95,27 +63,33 @@ export function FilterBar({
         </Select>
       )}
 
-      <Popover open={moreOpen} onOpenChange={setMoreOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="gap-2">
-            <SlidersHorizontal className="size-3.5" />
-            More filters
-            {moreCount > 0 && <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">{moreCount}</span>}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64" align="start">
-          <div className="space-y-3">
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Channel</p>
-              {channelSelect}
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Status</p>
-              {statusSelect}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+      <Select value={filters.channel} onValueChange={(channel) => onChange({ ...filters, channel: channel as Channel | "all" })}>
+        <SelectTrigger className="w-full sm:w-[150px]">
+          <SelectValue placeholder="All channels" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All channels</SelectItem>
+          {(Object.keys(CHANNEL_LABEL) as Channel[]).map((c) => (
+            <SelectItem key={c} value={c}>
+              {CHANNEL_LABEL[c]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.status} onValueChange={(status) => onChange({ ...filters, status: status as CampaignStatus | "all" })}>
+        <SelectTrigger className="w-full sm:w-[150px]">
+          <SelectValue placeholder="All statuses" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          {FILTERABLE_STATUSES.map((s) => (
+            <SelectItem key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {activeCount > 0 && (
         <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={clear}>

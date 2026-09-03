@@ -60,9 +60,13 @@ export function HeatmapGrid({ cells }: { cells: HeatCell[] }) {
         </div>
       </div>
       {peak && (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Peak window: <span className="font-medium text-foreground">{SHORT_DAY[peak.day]}, {peak.block}</span> generates the highest modeled GMV of the week.
-        </p>
+        <div className="mt-4 border-t border-border/70 pt-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Peak window</p>
+          <p className="mt-1 text-xl font-bold text-foreground sm:text-2xl">
+            {SHORT_DAY[peak.day]}, {peak.block}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Highest GMV of the week</p>
+        </div>
       )}
     </div>
   )

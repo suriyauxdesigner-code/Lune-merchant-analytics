@@ -79,7 +79,7 @@ export function EngagementFunnel({ perf }: { perf: Perf }) {
           <span className="font-medium text-foreground">
             {FUNNEL_STAGES[biggestDrop.index - 1].label} → {FUNNEL_STAGES[biggestDrop.index].label}
           </span>{" "}
-          ({formatPercent(biggestDrop.lossPct, 0)} lost). Offer shown/viewed/clicked requires SDK event instrumentation; transacted and rewarded require transaction data.
+          ({formatPercent(biggestDrop.lossPct, 0)} lost).
         </p>
       )}
     </div>

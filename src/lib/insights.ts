@@ -121,18 +121,3 @@ export function trendCaption(metricLabel: string, deltaPct: number | null): stri
   const up = deltaPct >= 0
   return `${metricLabel} is ${up ? "up" : "down"} ${formatPercent(Math.abs(deltaPct), 0)} vs. the prior period of equal length.`
 }
-
-/** Used by Qualification widgets to surface one actionable line when a reason clearly dominates. */
-export function qualificationActionInsight(buckets: QualificationBucket[]): string | null {
-  const top = topQualificationReason(buckets)
-  if (!top || top.sharePct < 30) return null
-  const suggestion =
-    top.reason === "Minimum spend not met"
-      ? "consider lowering the minimum spend threshold"
-      : top.reason === "Outside campaign period"
-        ? "consider extending the campaign window"
-        : top.reason === "Invalid merchant/terminal"
-          ? "check that all terminals are correctly registered to this campaign"
-          : "review the rules driving this reason"
-  return `"${top.reason}" accounts for ${formatPercent(top.sharePct, 0)} of disqualified attempts — ${suggestion}.`
-}

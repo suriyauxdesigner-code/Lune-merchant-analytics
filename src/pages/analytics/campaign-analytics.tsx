@@ -7,7 +7,6 @@ import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { ChannelBadge } from "@/components/shared/channel-badge"
 import { EmptyState } from "@/components/shared/empty-state"
-import { DetailGrid } from "@/components/analytics/detail-grid"
 import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
 import { MetricToggle } from "@/components/analytics/metric-toggle"
 import { BudgetPacingPanel } from "@/components/analytics/budget-pacing-panel"
@@ -147,16 +146,25 @@ export default function CampaignAnalytics() {
         }
       />
 
-      <SectionCard title="Campaign Configuration" description="Primary campaign configuration" className="mb-4">
-        <DetailGrid
-          items={[
-            { icon: <Percent className="size-4" />, label: "Cashback percentage", value: `${campaign.cashbackPercentage}%` },
-            { icon: <Wallet className="size-4" />, label: "Campaign budget", value: formatAed(campaign.budget) },
-            { icon: <ArrowDownToLine className="size-4" />, label: "Minimum spend", value: campaign.minimumSpend ? formatAed(campaign.minimumSpend) : "No minimum" },
-            { icon: <ShieldCheck className="size-4" />, label: "Cashback cap", value: `${formatAed(campaign.cashbackCap)} per transaction` },
-          ]}
-        />
-      </SectionCard>
+      {/* Secondary metadata — the campaign's own configuration, kept visually quiet so it doesn't compete with the KPIs below */}
+      <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Percent className="size-3.5" />
+          {campaign.cashbackPercentage}% cashback
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Wallet className="size-3.5" />
+          {formatAed(campaign.budget)} budget
+        </span>
+        <span className="flex items-center gap-1.5">
+          <ArrowDownToLine className="size-3.5" />
+          {campaign.minimumSpend ? `${formatAed(campaign.minimumSpend)} minimum spend` : "No minimum spend"}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <ShieldCheck className="size-3.5" />
+          {formatAed(campaign.cashbackCap)} cashback cap
+        </span>
+      </div>
 
       {/* 2. Campaign Health */}
       <KpiGrid>
@@ -168,7 +176,6 @@ export default function CampaignAnalytics() {
         <KpiCard icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
         <KpiCard icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
       </KpiGrid>
-      <p className="mt-2 text-xs text-muted-foreground">Transaction and cashback figures are prototype estimates — they require transaction/settlement data.</p>
 
       {/* 3. Budget Pacing — how quickly is this campaign consuming its budget? */}
       <section className="mt-12">

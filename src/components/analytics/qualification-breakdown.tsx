@@ -1,9 +1,15 @@
+import { Info } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatNumber } from "@/lib/utils"
-import { QUALIFICATION_NOTE } from "@/lib/future-data"
-import { qualificationActionInsight } from "@/lib/insights"
-import type { QualificationBucket } from "@/lib/mock-performance"
+import type { QualificationBucket, QualificationReason } from "@/lib/mock-performance"
 
 const COLORS = ["hsl(38 92% 42%)", "hsl(217 91% 45%)", "hsl(0 72% 51%)", "hsl(220 9% 55%)"]
+
+const SUGGESTION: Partial<Record<QualificationReason, string>> = {
+  "Minimum spend not met": "Consider lowering the minimum spend threshold to qualify more transactions.",
+  "Outside campaign period": "Consider extending the campaign window to capture more eligible purchases.",
+  "Invalid merchant/terminal": "Check that all terminals are correctly registered to this campaign.",
+}
 
 /**
  * "Why didn't this transaction qualify" — helps a merchant spot optimization opportunities in
@@ -14,7 +20,6 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
   const rejected = buckets.reduce((s, b) => s + b.count, 0)
   const total = rejected || 1
   const attempted = qualified != null ? qualified + rejected : null
-  const actionInsight = qualificationActionInsight(buckets)
 
   return (
     <div>
@@ -37,10 +42,23 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
       <div className="space-y-3.5">
         {buckets.map((bucket, i) => {
           const pct = Math.round((bucket.count / total) * 100)
+          const suggestion = SUGGESTION[bucket.reason]
           return (
             <div key={bucket.reason}>
               <div className="mb-1.5 flex items-center justify-between text-sm">
-                <span className="font-medium text-foreground">{bucket.reason}</span>
+                <span className="flex items-center gap-1.5 font-medium text-foreground">
+                  {bucket.reason}
+                  {suggestion && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground">
+                          <Info className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{suggestion}</TooltipContent>
+                    </Tooltip>
+                  )}
+                </span>
                 <span className="text-muted-foreground">
                   {formatNumber(bucket.count)} · {pct}%
                 </span>
@@ -52,8 +70,6 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
           )
         })}
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">{QUALIFICATION_NOTE}</p>
-      {actionInsight && <p className="mt-1.5 text-xs font-medium text-foreground">{actionInsight}</p>}
     </div>
   )
 }

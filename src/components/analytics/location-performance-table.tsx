@@ -23,6 +23,7 @@ export function LocationPerformanceTable({ locations }: { locations: LocationSta
           <TableHeader>
             <TableRow>
               <TableHead>Location</TableHead>
+              <TableHead>Terminal ID</TableHead>
               <TableHead>GMV</TableHead>
               <TableHead>Transactions</TableHead>
               <TableHead>AOV</TableHead>
@@ -33,6 +34,7 @@ export function LocationPerformanceTable({ locations }: { locations: LocationSta
             {locations.map((loc) => (
               <TableRow key={loc.location}>
                 <TableCell className="font-medium text-foreground">{loc.location}</TableCell>
+                <TableCell className="text-muted-foreground">{loc.terminalId ?? "—"}</TableCell>
                 <TableCell className="text-foreground">{formatAed(loc.gmv)}</TableCell>
                 <TableCell className="text-foreground">{formatNumber(loc.transactions)}</TableCell>
                 <TableCell className="text-foreground">{formatAed(loc.aov)}</TableCell>

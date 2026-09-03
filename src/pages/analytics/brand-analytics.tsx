@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FilterBar } from "@/components/analytics/filter-bar"
 import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
 import { PillToggle } from "@/components/analytics/pill-toggle"
-import { TopCampaignCard, type TopCampaignMetric } from "@/components/analytics/top-campaign-card"
+import { TopCampaignCard } from "@/components/analytics/top-campaign-card"
 import { CampaignPerformanceTable, type CampaignPerformanceRow } from "@/components/analytics/campaign-performance-table"
 import { CustomerImpactStats } from "@/components/analytics/customer-impact-stats"
 import { CustomerDemographicsPanel } from "@/components/analytics/customer-demographics-panel"
@@ -47,11 +47,6 @@ const BRAND_CHART_OPTIONS: { value: ChartMetric; label: string }[] = [
   { value: "gmv", label: "GMV" },
   { value: "transactions", label: "Transactions" },
 ]
-
-// Top Campaign is a single view showing every key metric at once (GMV, Transactions, ROI,
-// Cashback) — GMV is the ranking criterion, matching the default used elsewhere on this page
-// (Brand Performance, Campaign Performance).
-const TOP_CAMPAIGN_METRIC: TopCampaignMetric = "gmv"
 
 /**
  * Brand Analytics — the main Analytics landing experience. "How is this brand performing, which
@@ -280,7 +275,6 @@ export default function BrandAnalytics() {
                   name={topEntry.campaign.name}
                   status={topEntry.campaign.status}
                   perf={topEntry.perf}
-                  metric={TOP_CAMPAIGN_METRIC}
                   onSelect={() => navigate(`/analytics/campaigns/${topEntry.campaign.id}`)}
                 />
               ) : (

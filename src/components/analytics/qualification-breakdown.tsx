@@ -9,14 +9,13 @@ const COLORS = ["hsl(38 92% 42%)", "hsl(217 91% 45%)", "hsl(0 72% 51%)", "hsl(22
 // exists. "Other" has neither — there's nothing meaningful to explain or recommend.
 const MEANING: Partial<Record<QualificationReason, string>> = {
   "Minimum spend not met": "The transaction was below this campaign's minimum spend requirement.",
-  "Outside campaign period": "The purchase happened before the campaign started or after it ended.",
-  "Terminal not configured for this campaign": "The purchase happened at a terminal that isn't registered to this campaign.",
+  "Outside campaign period": "The transaction occurred outside the campaign's active period.",
+  "Transaction from an unconfigured terminal": "This transaction occurred at a payment terminal that isn't linked to the campaign.",
 }
 
 const TIP: Partial<Record<QualificationReason, string>> = {
-  "Minimum spend not met": "Consider lowering the minimum spend threshold to qualify more transactions.",
-  "Outside campaign period": "Consider extending the campaign window to capture more eligible purchases.",
-  "Terminal not configured for this campaign": "Check that all terminals are correctly registered to this campaign.",
+  "Minimum spend not met": "Consider lowering the minimum spend threshold to increase the number of eligible transactions.",
+  "Transaction from an unconfigured terminal": "Check that all terminals are correctly linked to this campaign.",
 }
 
 /**

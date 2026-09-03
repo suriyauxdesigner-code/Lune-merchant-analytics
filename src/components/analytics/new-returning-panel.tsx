@@ -11,20 +11,45 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
   const newAvgSpend = newStat.customers > 0 ? newStat.gmv / newStat.customers : 0
   const returningAvgSpend = returningStat.customers > 0 ? returningStat.gmv / returningStat.customers : 0
   const spendMultiple = newAvgSpend > 0 ? returningAvgSpend / newAvgSpend : 0
+  const newPct = totalCustomers > 0 ? (newStat.customers / totalCustomers) * 100 : 0
+  const returningPct = totalCustomers > 0 ? (returningStat.customers / totalCustomers) * 100 : 0
 
   return (
     <div>
-      <div className="flex flex-wrap items-start gap-8">
+      <div className="flex items-baseline gap-6">
+        <div>
+          <p className="text-2xl font-bold text-foreground sm:text-3xl">{formatPercent(newPct, 0)}</p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span className="size-2 rounded-full" style={{ backgroundColor: SEGMENT_COLORS.New }} />
+            New
+          </p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-foreground sm:text-3xl">{formatPercent(returningPct, 0)}</p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span className="size-2 rounded-full" style={{ backgroundColor: SEGMENT_COLORS.Returning }} />
+            Returning
+          </p>
+        </div>
+      </div>
+
+      {spendMultiple > 1.05 && (
+        <p className="mt-4 rounded-[var(--radius-sm)] bg-secondary/60 px-3.5 py-2.5 text-sm font-medium text-foreground">
+          Returning customers spend <span className="font-bold">{spendMultiple.toFixed(1)}×</span> more on average than a new customer's first purchase.
+        </p>
+      )}
+
+      <div className="mt-5 flex flex-wrap items-start gap-8">
         <div className="shrink-0">
           <DonutChart
             segments={stats.map((s) => ({ label: s.segment, value: s.customers, color: SEGMENT_COLORS[s.segment] }))}
             formatValue={formatNumber}
             centerLabel="Customers"
             centerValue={formatNumber(totalCustomers)}
-            size={160}
+            size={140}
           />
         </div>
-        <div className="min-w-[240px] flex-1 space-y-4">
+        <div className="min-w-[240px] flex-1 space-y-3">
           {stats.map((s) => {
             const avgSpend = s.customers > 0 ? s.gmv / s.customers : 0
             const avgTx = s.customers > 0 ? s.transactions / s.customers : 0
@@ -32,7 +57,7 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
               <div key={s.segment} className="rounded-[var(--radius-sm)] border border-border p-3.5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <span className="size-2 rounded-full" style={{ backgroundColor: SEGMENT_COLORS[s.segment] }} />
-                  {s.segment} · {formatPercent(totalCustomers > 0 ? (s.customers / totalCustomers) * 100 : 0, 0)}
+                  {s.segment}
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                   <span>
@@ -53,9 +78,6 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
           })}
         </div>
       </div>
-      {spendMultiple > 1.05 && (
-        <p className="mt-4 text-xs text-muted-foreground">Returning customers spend {spendMultiple.toFixed(1)}× more on average than a new customer's first purchase.</p>
-      )}
     </div>
   )
 }

@@ -74,13 +74,13 @@ export function EngagementFunnel({ perf }: { perf: Perf }) {
       </div>
 
       {biggestDrop.index > 0 && (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Biggest drop-off:{" "}
-          <span className="font-medium text-foreground">
-            {FUNNEL_STAGES[biggestDrop.index - 1].label} → {FUNNEL_STAGES[biggestDrop.index].label}
-          </span>{" "}
-          ({formatPercent(biggestDrop.lossPct, 0)} lost).
-        </p>
+        <div className="mt-5 border-t border-border/70 pt-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Biggest drop-off</p>
+          <p className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">{formatPercent(biggestDrop.lossPct, 0)} lost</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            between {FUNNEL_STAGES[biggestDrop.index - 1].label} → {FUNNEL_STAGES[biggestDrop.index].label}
+          </p>
+        </div>
       )}
     </div>
   )

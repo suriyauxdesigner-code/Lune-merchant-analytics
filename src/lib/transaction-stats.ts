@@ -44,16 +44,22 @@ export function computeAmountDistribution(rows: TransactionRow[], bucketCount = 
   return buckets
 }
 
-export type LocationStat = { location: string; terminalId: string | null; transactions: number; gmv: number; aov: number; customers: number }
+export type LocationStat = { location: string; terminalIds: string[]; transactions: number; gmv: number; aov: number; customers: number }
 
 /**
- * GMV/transactions/AOV per terminal, derived directly from transaction rows. "Customers" is
+ * GMV/transactions/AOV per location, derived directly from transaction rows. "Customers" is
  * estimated by applying the same transactions-to-unique-customers ratio used at the campaign
- * level (Pulse doesn't yet track a per-transaction customer identity). `terminalId` disambiguates
- * the display name (e.g. "Mall of the Emirates") from the actual registered POS terminal.
+ * level (Pulse doesn't yet track a per-transaction customer identity). `terminalIds` lists every
+ * registered terminal rolled into that location — a location can have more than one, so this is
+ * never collapsed down to a single ID.
  */
 export function computeLocationStats(rows: TransactionRow[], customerRatio: number, brandId: string): LocationStat[] {
-  const terminalIdByName = new Map(terminalsForBrand(brandId).map((t) => [t.terminalName, t.terminalId]))
+  const terminalIdsByName = new Map<string, string[]>()
+  for (const t of terminalsForBrand(brandId)) {
+    const list = terminalIdsByName.get(t.terminalName)
+    if (list) list.push(t.terminalId)
+    else terminalIdsByName.set(t.terminalName, [t.terminalId])
+  }
   const byLocation = new Map<string, { transactions: number; gmv: number }>()
   for (const row of rows) {
     const existing = byLocation.get(row.terminalName)
@@ -67,7 +73,7 @@ export function computeLocationStats(rows: TransactionRow[], customerRatio: numb
   return [...byLocation.entries()]
     .map(([location, v]) => ({
       location,
-      terminalId: terminalIdByName.get(location) ?? null,
+      terminalIds: terminalIdsByName.get(location) ?? [],
       transactions: v.transactions,
       gmv: v.gmv,
       aov: v.transactions > 0 ? Math.round(v.gmv / v.transactions) : 0,
@@ -78,29 +84,34 @@ export function computeLocationStats(rows: TransactionRow[], customerRatio: numb
 
 export type TerminalStat = { terminalName: string; terminalId: string | null; mid: string | null; transactions: number; gmv: number; cashback: number; qualificationRate: number }
 
-/** Per-location breakdown (keyed by the registered terminal) including a modeled qualification rate — used to spot operational issues (high volume, low qualification). */
-export function computeTerminalStats(rows: TransactionRow[], brandId: string): TerminalStat[] {
-  const terminalIdByName = new Map(terminalsForBrand(brandId).map((t) => [t.terminalName, t.terminalId]))
-  const byTerminal = new Map<string, { mid: string | null; transactions: number; gmv: number; cashback: number }>()
+/**
+ * Per-terminal breakdown, including a modeled qualification rate — used to spot operational
+ * issues (high volume, low qualification). Grouped by the actual terminal (terminalId), not just
+ * the location name — a location can have more than one registered terminal, and this is the
+ * data those terminals show up as separate rows in.
+ */
+export function computeTerminalStats(rows: TransactionRow[]): TerminalStat[] {
+  const byTerminal = new Map<string, { terminalName: string; terminalId: string | null; mid: string | null; transactions: number; gmv: number; cashback: number }>()
   for (const row of rows) {
-    const existing = byTerminal.get(row.terminalName)
+    const key = row.terminalId ?? row.terminalName
+    const existing = byTerminal.get(key)
     if (existing) {
       existing.transactions += 1
       existing.gmv += row.amount
       existing.cashback += row.cashback
     } else {
-      byTerminal.set(row.terminalName, { mid: row.mid, transactions: 1, gmv: row.amount, cashback: row.cashback })
+      byTerminal.set(key, { terminalName: row.terminalName, terminalId: row.terminalId, mid: row.mid, transactions: 1, gmv: row.amount, cashback: row.cashback })
     }
   }
-  return [...byTerminal.entries()]
-    .map(([terminalName, v]) => ({
-      terminalName,
-      terminalId: terminalIdByName.get(terminalName) ?? null,
+  return [...byTerminal.values()]
+    .map((v) => ({
+      terminalName: v.terminalName,
+      terminalId: v.terminalId,
       mid: v.mid,
       transactions: v.transactions,
       gmv: v.gmv,
       cashback: v.cashback,
-      qualificationRate: seeded(terminalName, 64, 60, 98),
+      qualificationRate: seeded(v.terminalId ?? v.terminalName, 64, 60, 98),
     }))
     .sort((a, b) => b.gmv - a.gmv)
 }
@@ -135,7 +146,7 @@ export function computeMidStats(rows: TransactionRow[], brandId: string): MidSta
   }
   const merchantIds = merchantIdsForBrand(brandId)
   const acquirerByMid = new Map(merchantIds.map((m) => [m.merchantId, m.acquirer]))
-  const locationsByMid = new Map(merchantIds.map((m) => [m.merchantId, m.terminals.map((t) => t.terminalName)]))
+  const locationsByMid = new Map(merchantIds.map((m) => [m.merchantId, [...new Set(m.terminals.map((t) => t.terminalName))]]))
 
   return [...byMid.entries()]
     .map(([mid, v]) => ({

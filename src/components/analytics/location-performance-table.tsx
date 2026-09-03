@@ -5,7 +5,11 @@ import { formatAed, formatNumber } from "@/lib/utils"
 import type { LocationStat } from "@/lib/transaction-stats"
 import { MapPin } from "lucide-react"
 
-/** This brand's strongest locations, ranked by GMV, with compact detail below. */
+/**
+ * This brand's strongest locations, ranked by GMV. A location's GMV/transactions are already the
+ * sum across every terminal registered there — the "Terminals" column says how many that is
+ * (and lists the IDs), rather than showing one ID as if a location only ever had one terminal.
+ */
 export function LocationPerformanceTable({ locations }: { locations: LocationStat[] }) {
   if (locations.length === 0) {
     return <EmptyState icon={<MapPin className="size-6" />} title="No location activity in range" description="Try widening the date range or clearing a filter." />
@@ -23,7 +27,7 @@ export function LocationPerformanceTable({ locations }: { locations: LocationSta
           <TableHeader>
             <TableRow>
               <TableHead>Location</TableHead>
-              <TableHead>Terminal ID</TableHead>
+              <TableHead>Terminals</TableHead>
               <TableHead>GMV</TableHead>
               <TableHead>Transactions</TableHead>
               <TableHead>AOV</TableHead>
@@ -33,8 +37,10 @@ export function LocationPerformanceTable({ locations }: { locations: LocationSta
           <TableBody>
             {locations.map((loc) => (
               <TableRow key={loc.location}>
-                <TableCell className="font-medium text-foreground">{loc.location}</TableCell>
-                <TableCell className="text-muted-foreground">{loc.terminalId ?? "—"}</TableCell>
+                <TableCell className="max-w-[220px] whitespace-normal font-medium text-foreground">{loc.location}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {loc.terminalIds.length > 0 ? `${loc.terminalIds.length} · ${loc.terminalIds.join(", ")}` : "—"}
+                </TableCell>
                 <TableCell className="text-foreground">{formatAed(loc.gmv)}</TableCell>
                 <TableCell className="text-foreground">{formatNumber(loc.transactions)}</TableCell>
                 <TableCell className="text-foreground">{formatAed(loc.aov)}</TableCell>

@@ -44,9 +44,9 @@ export function CustomerDemographicsPanel({ demographics, compact = false }: { d
         </div>
       </div>
       {topAge && (
-        <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{topAge.ageBand}</span> is the largest customer segment, contributing{" "}
-          {formatPercent(topAgeGmvShare, 0)} of GMV ({formatAed(topAge.gmv)}).
+        <p className="mt-5 border-t border-border pt-4 text-sm font-medium text-foreground">
+          <span className="font-bold">{topAge.ageBand}</span> is the largest customer segment, contributing{" "}
+          <span className="font-bold">{formatPercent(topAgeGmvShare, 0)}</span> of GMV ({formatAed(topAge.gmv)}).
         </p>
       )}
     </div>

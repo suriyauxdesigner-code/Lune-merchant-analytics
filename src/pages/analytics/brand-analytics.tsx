@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import { FilterBar } from "@/components/analytics/filter-bar"
 import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
 import { PillToggle } from "@/components/analytics/pill-toggle"
-import { TopCampaignHighlight } from "@/components/analytics/top-campaign-highlight"
 import { CampaignPerformanceTable, type CampaignPerformanceRow } from "@/components/analytics/campaign-performance-table"
 import { CustomerDemographicsPanel } from "@/components/analytics/customer-demographics-panel"
 import { CustomerValuePanel } from "@/components/analytics/customer-value-panel"
@@ -50,6 +49,11 @@ const BRAND_CHART_OPTIONS: { value: ChartMetric; label: string }[] = [
  * Brand Analytics — the main Analytics landing experience for the merchant's brand. "How is this
  * brand performing, which campaign is leading, who are its customers, and where does it move?"
  * The merchant only has access to their own brand, so there is no cross-brand switcher here.
+ *
+ * KPIs and every customer/qualification/engagement widget below all read from `cohortPerf` (the
+ * same aggregate over the same filtered campaign set) so a number never disagrees with itself
+ * between sections — the one exception is the time-series chart, which necessarily reads from
+ * the daily series to plot a real calendar trend.
  */
 export default function BrandAnalytics() {
   const { brandId = "" } = useParams()
@@ -65,7 +69,6 @@ export default function BrandAnalytics() {
   const range = resolveDateRange(filters.dateRange, filters.customRange)
   const prevRange = React.useMemo(() => previousPeriod(range), [range])
   const mergedDaily = React.useMemo(() => aggregatePerformance(nonDateCampaigns).dailySeries, [nonDateCampaigns])
-
   const current = React.useMemo(() => sumSeriesInRange(mergedDaily, range), [mergedDaily, range])
   const previous = React.useMemo(() => sumSeriesInRange(mergedDaily, prevRange), [mergedDaily, prevRange])
   const chartSeries = React.useMemo(() => bucketSeries(mergedDaily, range), [mergedDaily, range])
@@ -94,18 +97,6 @@ export default function BrandAnalytics() {
   // Ranked/tabular performance views only make sense for campaigns that have actually started.
   const performanceCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active" || c.status === "completed"), [filteredCampaigns])
   const rankedCampaigns = React.useMemo(() => performanceCampaigns.map((c) => ({ campaign: c, perf: getCampaignPerformance(c) })), [performanceCampaigns])
-
-  // The strongest campaign by GMV, and the average GMV across every OTHER eligible campaign —
-  // the baseline the highlight's uplift line is measured against, not just "top row of the table".
-  const topEntry = React.useMemo(() => {
-    if (rankedCampaigns.length === 0) return null
-    return [...rankedCampaigns].sort((a, b) => b.perf.transactionValue - a.perf.transactionValue)[0]
-  }, [rankedCampaigns])
-  const otherCampaignsAvgGmv = React.useMemo(() => {
-    if (!topEntry) return 0
-    const others = rankedCampaigns.filter((r) => r.campaign.id !== topEntry.campaign.id)
-    return others.length > 0 ? others.reduce((s, r) => s + r.perf.transactionValue, 0) / others.length : 0
-  }, [rankedCampaigns, topEntry])
 
   const campaignRows: CampaignPerformanceRow[] = React.useMemo(
     () =>
@@ -185,8 +176,8 @@ export default function BrandAnalytics() {
             <KpiCard
               icon={<TrendingUp className="size-4" />}
               label="Total GMV"
-              value={formatAed(current.transactionValue)}
-              deltaPct={percentChange(current.transactionValue, previous.transactionValue)}
+              value={formatAed(cohortPerf.transactionValue)}
+              deltaPct={percentChange(cohortPerf.transactionValue, previousCohortPerf.transactionValue)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
@@ -194,8 +185,8 @@ export default function BrandAnalytics() {
             <KpiCard
               icon={<Receipt className="size-4" />}
               label="Transactions"
-              value={formatNumber(current.transactions)}
-              deltaPct={percentChange(current.transactions, previous.transactions)}
+              value={formatNumber(cohortPerf.transactions)}
+              deltaPct={percentChange(cohortPerf.transactions, previousCohortPerf.transactions)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
@@ -203,8 +194,8 @@ export default function BrandAnalytics() {
             <KpiCard
               icon={<Target className="size-4" />}
               label="ROI"
-              value={formatRatio(current.roi)}
-              deltaPct={percentChange(current.roi, previous.roi)}
+              value={formatRatio(cohortPerf.roi)}
+              deltaPct={percentChange(cohortPerf.roi, previousCohortPerf.roi)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
@@ -212,8 +203,8 @@ export default function BrandAnalytics() {
             <KpiCard
               icon={<Coins className="size-4" />}
               label="Cashback Issued"
-              value={formatAed(current.cashbackIssued)}
-              deltaPct={percentChange(current.cashbackIssued, previous.cashbackIssued)}
+              value={formatAed(cohortPerf.cashbackIssued)}
+              deltaPct={percentChange(cohortPerf.cashbackIssued, previousCohortPerf.cashbackIssued)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
@@ -231,8 +222,8 @@ export default function BrandAnalytics() {
             />
             <KpiCard
               label="Avg. Transaction Value"
-              value={formatAed(current.avgTransactionValue)}
-              deltaPct={percentChange(current.avgTransactionValue, previous.avgTransactionValue)}
+              value={formatAed(cohortPerf.avgTransactionValue)}
+              deltaPct={percentChange(cohortPerf.avgTransactionValue, previousCohortPerf.avgTransactionValue)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
@@ -240,48 +231,31 @@ export default function BrandAnalytics() {
             />
           </KpiGrid>
 
-          {/* Campaign Performance — trend, then the featured campaign, then the full comparison table */}
+          {/* Campaign Performance — aggregate trend across all of this brand's campaigns, then the full comparison table */}
           <section className="mt-12">
-            <div className="mb-5">
-              <h2 className="text-lg font-bold text-foreground">Campaign Performance</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Trend, standout campaign, and full comparison across this brand's campaigns</p>
-            </div>
-
             <SectionCard
-              title="All Campaigns Performance"
-              description="GMV and transaction trend across the selected period"
+              title="Campaign Performance"
+              description="GMV and transaction trends across the selected period"
               contentClassName="pt-2"
               actions={<PillToggle value={chartMetric} onChange={setChartMetric} options={BRAND_CHART_OPTIONS} />}
             >
               <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
               {chartCaption && <p className="mt-3 border-t border-border/70 px-1 pt-4 text-sm font-medium text-foreground">{chartCaption}</p>}
             </SectionCard>
-
-            {topEntry && (
-              <div className="mt-6">
-                <TopCampaignHighlight
-                  name={topEntry.campaign.name}
-                  status={topEntry.campaign.status}
-                  perf={topEntry.perf}
-                  avgGmv={otherCampaignsAvgGmv}
-                  onSelect={() => navigate(`/analytics/campaigns/${topEntry.campaign.id}`)}
-                />
-              </div>
-            )}
-
-            <div className="mt-6">
-              <SectionCard title="Campaign Comparison" description="All live and completed campaigns for this brand. Sort a column, or click a row to open its analytics.">
-                <CampaignPerformanceTable
-                  rows={campaignRows}
-                  onSelect={(id) => navigate(`/analytics/campaigns/${id}`)}
-                  emptyTitle="No campaigns in this range"
-                  emptyDescription={`${brand.name} has no active or completed campaigns in this range. Widen the date range to see more.`}
-                />
-              </SectionCard>
-            </div>
           </section>
 
-          {/* Customer Insights — reach, demographics, value, frequency, retention and engagement together */}
+          <section className="mt-6">
+            <SectionCard title="All Campaigns" description="Every live and completed campaign for this brand. Sort a column, or click a row to open its analytics.">
+              <CampaignPerformanceTable
+                rows={campaignRows}
+                onSelect={(id) => navigate(`/analytics/campaigns/${id}`)}
+                emptyTitle="No campaigns in this range"
+                emptyDescription={`${brand.name} has no active or completed campaigns in this range. Widen the date range to see more.`}
+              />
+            </SectionCard>
+          </section>
+
+          {/* Customer Insights — reach, demographics, value, frequency and retention */}
           <section className="mt-12">
             <div className="mb-5">
               <h2 className="text-lg font-bold text-foreground">Customer Insights</h2>
@@ -291,17 +265,17 @@ export default function BrandAnalytics() {
             <KpiGrid>
               <KpiCard
                 icon={<Users className="size-4" />}
-                label="Reached Customers"
+                label="Customers Reached"
                 value={formatNumber(cohortPerf.customersReached)}
                 deltaPct={percentChange(cohortPerf.customersReached, previousCohortPerf.customersReached)}
-                hint={periodLabel}
+                hint={`Shown an offer · ${periodLabel}`}
                 tier="transaction"
                 showTierBadge={false}
                 size="md"
               />
               <KpiCard
                 icon={<Users className="size-4" />}
-                label="Total Customers"
+                label="Customers Who Transacted"
                 value={formatNumber(cohortPerf.customersTransacted)}
                 deltaPct={percentChange(cohortPerf.customersTransacted, previousCohortPerf.customersTransacted)}
                 hint={periodLabel}
@@ -355,12 +329,13 @@ export default function BrandAnalytics() {
                 <PurchaseFrequencyPanel buckets={freqBuckets} />
               </SectionCard>
             </div>
+          </section>
 
-            <div className="mt-6">
-              <SectionCard title="Engagement" description="From offer shown to cashback rewarded, aggregated across this brand's campaigns">
-                <EngagementFunnel perf={cohortPerf} />
-              </SectionCard>
-            </div>
+          {/* Engagement — a distinct section from Customer Insights: how exposure converts to transactions */}
+          <section className="mt-12">
+            <SectionCard title="Engagement" description="How customers move from offer exposure to completed transactions, aggregated across this brand's campaigns">
+              <EngagementFunnel perf={cohortPerf} />
+            </SectionCard>
           </section>
 
           {/* Qualification Insights */}
@@ -375,7 +350,7 @@ export default function BrandAnalytics() {
 
           {/* Location Performance */}
           <section className="mt-12">
-            <SectionCard title="Top Locations" description="This brand's strongest store locations, by GMV — each row is one registered terminal.">
+            <SectionCard title="Top Locations" description="This brand's strongest store locations, by GMV">
               <LocationPerformanceTable locations={locationStats} />
             </SectionCard>
           </section>

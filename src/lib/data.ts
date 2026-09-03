@@ -55,6 +55,7 @@ export const BRANDS: Brand[] = [
         terminals: [
           { id: "tid-faces-3", terminalId: "TID-00930", channel: "in_store", terminalName: "Dubai Mall" },
           { id: "tid-faces-4", terminalId: "TID-00931", channel: "in_store", terminalName: "Mall of the Emirates" },
+          { id: "tid-faces-5", terminalId: "TID-00932", channel: "in_store", terminalName: "Mall of the Emirates" },
         ],
       },
     ],
@@ -76,6 +77,7 @@ export const BRANDS: Brand[] = [
         channel: "both",
         terminals: [
           { id: "tid-tryano-1", terminalId: "TID-11002", channel: "in_store", terminalName: "Mall of the Emirates" },
+          { id: "tid-tryano-6", terminalId: "TID-11006", channel: "in_store", terminalName: "Mall of the Emirates" },
           { id: "tid-tryano-2", terminalId: "TID-11003", channel: "online", terminalName: "tryano.ae checkout" },
         ],
       },
@@ -119,6 +121,7 @@ export const BRANDS: Brand[] = [
         terminals: [
           { id: "tid-tanagra-3", terminalId: "TID-20913", channel: "in_store", terminalName: "Yas Mall, Abu Dhabi" },
           { id: "tid-tanagra-4", terminalId: "TID-20914", channel: "in_store", terminalName: "Sharjah City Centre" },
+          { id: "tid-tanagra-5", terminalId: "TID-20915", channel: "in_store", terminalName: "Yas Mall, Abu Dhabi" },
         ],
       },
     ],
@@ -150,6 +153,7 @@ export const BRANDS: Brand[] = [
         channel: "in_store",
         terminals: [
           { id: "tid-level-3", terminalId: "TID-30223", channel: "in_store", terminalName: "Mall of the Emirates" },
+          { id: "tid-level-5", terminalId: "TID-30225", channel: "in_store", terminalName: "Mall of the Emirates" },
           { id: "tid-level-4", terminalId: "TID-30224", channel: "in_store", terminalName: "Yas Mall, Abu Dhabi" },
         ],
       },
@@ -1260,14 +1264,14 @@ export function terminalsForBrand(brandId: string, channel?: "online" | "in_stor
   return channel ? terminals.filter((t) => t.channel === channel) : terminals
 }
 
-export type MidTerminal = { terminalName: string; mid: string; acquirer: string; channel: "online" | "in_store" }
+export type MidTerminal = { terminalName: string; terminalId: string; mid: string; acquirer: string; channel: "online" | "in_store" }
 
-/** Every terminal registered to a brand, annotated with the Merchant ID that owns it — the basis for MID-level performance rollups. */
+/** Every terminal registered to a brand, annotated with the Merchant ID that owns it — the basis for MID-level performance rollups. A location can have more than one terminal (e.g. two POS devices at the same mall), so this is deliberately terminal-level, not deduplicated by location name. */
 export function midTerminalsForBrand(brandId: string, channel?: "online" | "in_store"): MidTerminal[] {
   const brand = brandById(brandId)
   if (!brand) return []
   const rows = brand.merchantIds.flatMap((m) =>
-    m.terminals.map((t) => ({ terminalName: t.terminalName, mid: m.merchantId, acquirer: m.acquirer, channel: t.channel }))
+    m.terminals.map((t) => ({ terminalName: t.terminalName, terminalId: t.terminalId, mid: m.merchantId, acquirer: m.acquirer, channel: t.channel }))
   )
   return channel ? rows.filter((r) => r.channel === channel) : rows
 }

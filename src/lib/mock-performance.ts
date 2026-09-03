@@ -89,7 +89,7 @@ export type ChannelPerf = {
   roi: number
 }
 
-export type QualificationReason = "Minimum spend not met" | "Outside campaign period" | "Terminal not configured for this campaign" | "Other"
+export type QualificationReason = "Minimum spend not met" | "Outside campaign period" | "Transaction from an unconfigured terminal" | "Other"
 
 export type QualificationBucket = { reason: QualificationReason; count: number }
 
@@ -129,7 +129,7 @@ export type CampaignPerformance = {
 const ZERO_QUALIFICATION: QualificationBucket[] = [
   { reason: "Minimum spend not met", count: 0 },
   { reason: "Outside campaign period", count: 0 },
-  { reason: "Terminal not configured for this campaign", count: 0 },
+  { reason: "Transaction from an unconfigured terminal", count: 0 },
   { reason: "Other", count: 0 },
 ]
 
@@ -239,7 +239,7 @@ function computeCampaignPerformance(campaign: Campaign): CampaignPerformance {
   const qualification: QualificationBucket[] = [
     { reason: "Minimum spend not met", count: Math.round(disqualifiedCount * minSpendShare) },
     { reason: "Outside campaign period", count: Math.round(disqualifiedCount * outsidePeriodShare) },
-    { reason: "Terminal not configured for this campaign", count: Math.round(disqualifiedCount * invalidTerminalShare) },
+    { reason: "Transaction from an unconfigured terminal", count: Math.round(disqualifiedCount * invalidTerminalShare) },
     { reason: "Other", count: Math.round(disqualifiedCount * otherShare) },
   ]
 
@@ -802,6 +802,8 @@ export type TransactionRow = {
   cashback: number
   channel: "online" | "in_store"
   terminalName: string
+  /** The specific registered terminal — null only in the rare case a brand has no registered MID for this channel. A location's terminalName can be shared by more than one terminalId (e.g. two POS devices at the same mall). */
+  terminalId: string | null
   /** Merchant ID that processed this transaction — null only if the brand has no registered MID for this channel. */
   mid: string | null
   status: "Rewarded" | "Pending settlement"
@@ -854,7 +856,7 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
     // performance reflect the merchant's real terminal configuration, not a generic pool.
     const inStoreMids = midTerminalsForBrand(campaign.brandId, "in_store")
     const onlineMids = midTerminalsForBrand(campaign.brandId, "online")
-    const fallbackTerminal = { terminalName: `${campaign.brandId}.ae checkout`, mid: null as string | null }
+    const fallbackTerminal = { terminalName: `${campaign.brandId}.ae checkout`, terminalId: null as string | null, mid: null as string | null }
 
     const customerSequence = getCustomerSequence(campaign)
     let customerCursor = 0
@@ -867,8 +869,11 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
         const channel: "online" | "in_store" =
           campaign.channel === "both" ? (seeded(rowSeed, 31, 0, 1) < 0.5 ? "online" : "in_store") : campaign.channel
         const pool = channel === "online" ? onlineMids : inStoreMids
-        const picked = pool.length > 0 ? pool[Math.floor(seeded(rowSeed, 32, 0, pool.length))] : { terminalName: TERMINAL_POOL[Math.floor(seeded(rowSeed, 32, 0, TERMINAL_POOL.length))], mid: null }
-        const { terminalName, mid } = channel === "online" && pool.length === 0 ? fallbackTerminal : picked
+        const picked =
+          pool.length > 0
+            ? pool[Math.floor(seeded(rowSeed, 32, 0, pool.length))]
+            : { terminalName: TERMINAL_POOL[Math.floor(seeded(rowSeed, 32, 0, TERMINAL_POOL.length))], terminalId: null, mid: null }
+        const { terminalName, terminalId, mid } = channel === "online" && pool.length === 0 ? fallbackTerminal : picked
         const status = seeded(rowSeed, 33, 0, 1) < 0.04 ? "Pending settlement" : "Rewarded"
 
         const customerId = customerSequence[customerCursor] ?? `${campaign.id}-cust-${customerCursor}`
@@ -885,6 +890,7 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
           cashback,
           channel,
           terminalName,
+          terminalId,
           mid,
           status,
           customerId,

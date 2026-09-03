@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useParams, Link } from "react-router-dom"
-import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Clock, CalendarDays, TrendingUp, Receipt, Coins, Target, Gauge, BarChart3, Megaphone as MegaphoneIcon } from "lucide-react"
+import { Percent, Wallet, ArrowDownToLine, ShieldCheck, Building2, Clock, CalendarDays, TrendingUp, Receipt, Coins, Target, Users, BarChart3, Megaphone as MegaphoneIcon } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard, KpiGrid } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
@@ -24,7 +24,7 @@ import { NewReturningPanel } from "@/components/analytics/new-returning-panel"
 import { KeyInsights } from "@/components/analytics/key-insights"
 import { TransactionSection } from "@/components/analytics/transaction-section"
 import { campaignById, brandById } from "@/lib/data"
-import { formatAed, formatDate, formatNumber, formatPercent, formatRatio } from "@/lib/utils"
+import { formatAed, formatDate, formatNumber, formatRatio } from "@/lib/utils"
 import { durationLabel } from "@/lib/analytics-utils"
 import {
   getCampaignPerformance,
@@ -53,6 +53,9 @@ export default function CampaignAnalytics() {
   const [chartMetric, setChartMetric] = React.useState<ChartMetric>("gmv")
 
   const perf = React.useMemo(() => (campaign ? getCampaignPerformance(campaign) : null), [campaign])
+  // This page has no date-range filter — every KPI always covers the campaign's full run, so the
+  // period hint is a fixed label rather than something derived from active filter state.
+  const periodLabel = "Campaign lifetime"
   const chartSeries = React.useMemo(() => {
     if (!perf || perf.dailySeries.length === 0) return []
     const from = new Date(perf.dailySeries[0].date)
@@ -165,15 +168,16 @@ export default function CampaignAnalytics() {
         </span>
       </div>
 
-      {/* Campaign Overview — GMV, Transactions, ROI lead; budget/AOV detail is secondary */}
+      {/* Campaign Overview — the same six core performance KPIs as Brand Analytics, all equal weight.
+          Budget Used / Budget Remaining are intentionally not here — they're secondary to core
+          performance and already surfaced (both progress and figure) in the Budget Pacing panel below. */}
       <KpiGrid>
-        <KpiCard icon={<TrendingUp className="size-4" />} label="GMV" value={formatAed(perf.transactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Receipt className="size-4" />} label="Transactions" value={formatNumber(perf.transactions)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Target className="size-4" />} label="ROI" value={formatRatio(perf.roi)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Gauge className="size-4" />} label="Budget Used" value={formatPercent(perf.utilizationPct)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<TrendingUp className="size-[18px]" />} label="GMV" value={formatAed(perf.transactionValue)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Receipt className="size-[18px]" />} label="Transactions" value={formatNumber(perf.transactions)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Target className="size-[18px]" />} label="ROI" value={formatRatio(perf.roi)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Coins className="size-[18px]" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Users className="size-[18px]" />} label="Customers" value={formatNumber(perf.customersTransacted)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<BarChart3 className="size-[18px]" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} hint={periodLabel} tier="transaction" showTierBadge={false} />
       </KpiGrid>
 
       {/* Campaign Overview — trend and pacing behind the KPIs above */}

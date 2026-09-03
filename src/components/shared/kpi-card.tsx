@@ -1,5 +1,4 @@
-import { Children, type ReactNode } from "react"
-import { ArrowDown, ArrowUp } from "lucide-react"
+import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import type { DataTier } from "@/lib/mock-performance"
 
@@ -14,15 +13,13 @@ const TIER_SHORT_LABEL: Record<Exclude<DataTier, "live">, string> = {
 }
 
 /**
- * A single KPI tile used everywhere across Analytics. Every metric — live,
- * transaction-derived, or future-instrumentation — renders with a real
- * (mock, for now) value in the identical card style, at the identical
- * typography and spacing. There is no "headline vs. secondary" size variant:
- * every KPI value across Brand Analytics and Campaign Analytics reads at the
- * same weight, so a page's hierarchy comes from section grouping and order,
- * never from shrinking some tiles' numbers. The only difference between
- * tiles is a small tier badge for anything that isn't live product data yet.
- * We never hide, disable, grey out, or lock a widget.
+ * A single, compact KPI tile used everywhere across Analytics — Brand Analytics and Campaign
+ * Analytics both render every KPI through this one component, at the identical typography and
+ * spacing. Every value reads at the same size regardless of metric type (currency, count, ratio,
+ * percentage) or how long it is: hierarchy between metrics comes from section grouping and order,
+ * never from shrinking or enlarging individual tiles. The only difference between tiles is a small
+ * tier badge for anything that isn't live product data yet. We never hide, disable, grey out, or
+ * lock a widget.
  */
 export function KpiCard({
   label,
@@ -31,7 +28,6 @@ export function KpiCard({
   tierLabel,
   icon,
   hint,
-  deltaPct,
   className,
   showTierBadge = true,
 }: {
@@ -42,88 +38,42 @@ export function KpiCard({
   /** Override the default badge text for this tier. */
   tierLabel?: string
   icon?: ReactNode
+  /** Supporting context below the value — typically the active period ("Last 90 days", "Campaign lifetime"). Always reflect the page's real active filter here; never hardcode a period that isn't actually in effect. */
   hint?: string
-  /** % change vs. the previous period of equal length. Omit (or null) when there's no prior-period activity to compare against. */
-  deltaPct?: number | null
   className?: string
   /** Set false to suppress the per-tile tier badge — use when a single caption below a group covers it instead. */
   showTierBadge?: boolean
 }) {
   return (
-    <div className={cn("w-full min-w-0 rounded-[var(--radius)] border border-border bg-card p-6 shadow-card", className)}>
+    <div className={cn("w-full min-w-0 rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[18px] font-medium leading-6 text-foreground">{label}</p>
-        {icon && <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">{icon}</div>}
+        <p className="text-[15px] font-medium leading-5 text-foreground">{label}</p>
+        {icon && (
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary [&>svg]:size-[18px]">{icon}</div>
+        )}
       </div>
-      <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <p className="min-w-0 break-words text-[40px] font-semibold leading-[48px] text-foreground">{value}</p>
-        {deltaPct != null && <DeltaBadge pct={deltaPct} />}
-      </div>
-      {hint && <p className="mt-2 text-base leading-6 font-normal text-muted-foreground">{hint}</p>}
+      <p className="mt-5 min-w-0 truncate text-[28px] font-semibold leading-8 tabular-nums text-foreground">{value}</p>
+      {hint && <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{hint}</p>}
       {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-2" />}
     </div>
   )
 }
 
-/** Small up/down indicator comparing the current period to the one before it. */
-export function DeltaBadge({ pct }: { pct: number }) {
-  const isUp = pct >= 0
-  const Icon = isUp ? ArrowUp : ArrowDown
-  return (
-    <span className={cn("flex items-center gap-0.5 text-xs font-semibold", isUp ? "text-success" : "text-destructive")}>
-      <Icon className="size-3" />
-      {Math.abs(pct).toFixed(1)}%
-    </span>
-  )
-}
-
-const SM_COLS_CLASS: Record<number, string> = { 1: "sm:grid-cols-1", 2: "sm:grid-cols-2", 3: "sm:grid-cols-3" }
-const LG_COLS_CLASS: Record<number, string> = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4" }
-
-/** Splits `count` items across as few rows as possible (max 4 per row), balancing rows rather than front-loading them — 6 becomes 3+3, 7 becomes 4+3, not 4+2+1. */
-function balancedRowSizes(count: number): number[] {
-  const numRows = Math.max(1, Math.ceil(count / 4))
-  const sizes: number[] = []
-  let remaining = count
-  for (let r = 0; r < numRows; r++) {
-    const rowsLeft = numRows - r
-    const size = Math.ceil(remaining / rowsLeft)
-    sizes.push(size)
-    remaining -= size
-  }
-  return sizes
-}
-
 /**
- * A responsive grid of individual KpiCards — never more than 4 per row. When wrapping is
- * needed, each row is its own grid sized to exactly its own card count, so cards always fill
- * their row edge-to-edge instead of leaving a dead trailing cell (e.g. a 4+3 split renders as
- * two full-width rows, not a 4-column grid with one empty slot in the second row).
+ * A clean, equal-width KPI grid — 3 columns on desktop, 2 on tablet, 1 on mobile, with a
+ * consistent gap at every breakpoint. The column steps land later than the typical `sm`/`lg` pair
+ * (2 columns from `lg` at 1024px, 3 from `xl` at 1280px): the app's sidebar is a fixed ~264px and
+ * becomes permanently visible from `md` (768px) up, so a naive `sm:grid-cols-2` leaves each tablet
+ * card only ~170px of content width in the 768–1023px range — not enough for a long
+ * "AED 1,407,735"-style value at 28px without silently truncating it. Waiting for `lg`/`xl` keeps
+ * every column step at a width that's actually been verified to fit the longest realistic value on
+ * one line. Below `lg`, a single column always has the full content width, so it's never at risk.
+ * Deliberately a single flat grid (not a row-balancing layout): with a fixed 6-metric KPI
+ * architecture across Analytics, plain responsive reflow reads as a calm, standard SaaS dashboard
+ * rather than a bespoke layout.
  */
 export function KpiGrid({ children, className }: { children: ReactNode; className?: string }) {
-  const items = Children.toArray(children)
-  const rowSizes = balancedRowSizes(items.length)
-
-  const rows: ReactNode[][] = []
-  let cursor = 0
-  for (const size of rowSizes) {
-    rows.push(items.slice(cursor, cursor + size))
-    cursor += size
-  }
-
-  return (
-    <div className={cn("space-y-3", className)}>
-      {rows.map((rowItems, i) => {
-        const cols = rowItems.length
-        const smCols = Math.min(3, cols)
-        return (
-          <div key={i} className={cn("grid grid-cols-2 gap-3", SM_COLS_CLASS[smCols], LG_COLS_CLASS[cols])}>
-            {rowItems}
-          </div>
-        )
-      })}
-    </div>
-  )
+  return <div className={cn("grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3", className)}>{children}</div>
 }
 
 export function TierBadge({ tier, label, className }: { tier: Exclude<DataTier, "live">; label?: string; className?: string }) {

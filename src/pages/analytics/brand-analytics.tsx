@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { Store, TrendingUp, Receipt, Coins, Target, Users, UserPlus, Repeat, Wallet, Download } from "lucide-react"
+import { Store, TrendingUp, Receipt, Coins, Target, Users, UserPlus, Repeat, Wallet, Download, BarChart3 } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard, KpiGrid } from "@/components/shared/kpi-card"
 import { SectionCard } from "@/components/shared/section-card"
@@ -74,11 +74,6 @@ export default function BrandAnalytics() {
   const chartSeries = React.useMemo(() => bucketSeries(mergedDaily, range), [mergedDaily, range])
 
   const cohortPerf = React.useMemo(() => aggregatePerformance(filteredCampaigns), [filteredCampaigns])
-  const previousCohortCampaigns = React.useMemo(
-    () => applyCampaignFilters(allCampaigns, { ...filters, dateRange: "custom", customRange: prevRange }),
-    [allCampaigns, filters, prevRange]
-  )
-  const previousCohortPerf = React.useMemo(() => aggregatePerformance(previousCohortCampaigns), [previousCohortCampaigns])
   const transactionRows = React.useMemo(() => generateTransactionRows(filteredCampaigns), [filteredCampaigns])
   const periodLabel = dateRangeLabel(filters.dateRange)
 
@@ -92,7 +87,6 @@ export default function BrandAnalytics() {
   const freqBuckets = React.useMemo(() => getPurchaseFrequency(filteredCampaigns), [filteredCampaigns])
 
   const avgCustomerValue = cohortPerf.customersTransacted > 0 ? cohortPerf.transactionValue / cohortPerf.customersTransacted : 0
-  const avgCustomerValuePrev = previousCohortPerf.customersTransacted > 0 ? previousCohortPerf.transactionValue / previousCohortPerf.customersTransacted : 0
 
   // Ranked/tabular performance views only make sense for campaigns that have actually started.
   const performanceCampaigns = React.useMemo(() => filteredCampaigns.filter((c) => c.status === "active" || c.status === "completed"), [filteredCampaigns])
@@ -171,57 +165,17 @@ export default function BrandAnalytics() {
         </div>
       ) : (
         <>
-          {/* Overview — three headline metrics, three lighter supporting ones */}
+          {/* Overview — the brand's six core performance KPIs, all equal weight */}
           <KpiGrid>
+            <KpiCard icon={<TrendingUp className="size-[18px]" />} label="Total GMV" value={formatAed(cohortPerf.transactionValue)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+            <KpiCard icon={<Receipt className="size-[18px]" />} label="Transactions" value={formatNumber(cohortPerf.transactions)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+            <KpiCard icon={<Target className="size-[18px]" />} label="ROI" value={formatRatio(cohortPerf.roi)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+            <KpiCard icon={<Coins className="size-[18px]" />} label="Cashback Issued" value={formatAed(cohortPerf.cashbackIssued)} hint={periodLabel} tier="transaction" showTierBadge={false} />
+            <KpiCard icon={<Users className="size-[18px]" />} label="Customers" value={formatNumber(cohortPerf.customersTransacted)} hint={periodLabel} tier="transaction" showTierBadge={false} />
             <KpiCard
-              icon={<TrendingUp className="size-4" />}
-              label="Total GMV"
-              value={formatAed(cohortPerf.transactionValue)}
-              deltaPct={percentChange(cohortPerf.transactionValue, previousCohortPerf.transactionValue)}
-              hint={periodLabel}
-              tier="transaction"
-              showTierBadge={false}
-            />
-            <KpiCard
-              icon={<Receipt className="size-4" />}
-              label="Transactions"
-              value={formatNumber(cohortPerf.transactions)}
-              deltaPct={percentChange(cohortPerf.transactions, previousCohortPerf.transactions)}
-              hint={periodLabel}
-              tier="transaction"
-              showTierBadge={false}
-            />
-            <KpiCard
-              icon={<Target className="size-4" />}
-              label="ROI"
-              value={formatRatio(cohortPerf.roi)}
-              deltaPct={percentChange(cohortPerf.roi, previousCohortPerf.roi)}
-              hint={periodLabel}
-              tier="transaction"
-              showTierBadge={false}
-            />
-            <KpiCard
-              icon={<Coins className="size-4" />}
-              label="Cashback Issued"
-              value={formatAed(cohortPerf.cashbackIssued)}
-              deltaPct={percentChange(cohortPerf.cashbackIssued, previousCohortPerf.cashbackIssued)}
-              hint={periodLabel}
-              tier="transaction"
-              showTierBadge={false}
-            />
-            <KpiCard
-              icon={<Users className="size-4" />}
-              label="Customers"
-              value={formatNumber(cohortPerf.customersTransacted)}
-              deltaPct={percentChange(cohortPerf.customersTransacted, previousCohortPerf.customersTransacted)}
-              hint={periodLabel}
-              tier="transaction"
-              showTierBadge={false}
-            />
-            <KpiCard
+              icon={<BarChart3 className="size-[18px]" />}
               label="Avg. Transaction Value"
               value={formatAed(cohortPerf.avgTransactionValue)}
-              deltaPct={percentChange(cohortPerf.avgTransactionValue, previousCohortPerf.avgTransactionValue)}
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
@@ -261,46 +215,41 @@ export default function BrandAnalytics() {
 
             <KpiGrid>
               <KpiCard
-                icon={<Users className="size-4" />}
+                icon={<Users className="size-[18px]" />}
                 label="Customers Reached"
                 value={formatNumber(cohortPerf.customersReached)}
-                deltaPct={percentChange(cohortPerf.customersReached, previousCohortPerf.customersReached)}
                 hint={`Shown an offer · ${periodLabel}`}
                 tier="transaction"
                 showTierBadge={false}
               />
               <KpiCard
-                icon={<Users className="size-4" />}
+                icon={<Users className="size-[18px]" />}
                 label="Customers Who Transacted"
                 value={formatNumber(cohortPerf.customersTransacted)}
-                deltaPct={percentChange(cohortPerf.customersTransacted, previousCohortPerf.customersTransacted)}
                 hint={periodLabel}
                 tier="transaction"
                 showTierBadge={false}
               />
               <KpiCard
-                icon={<UserPlus className="size-4" />}
+                icon={<UserPlus className="size-[18px]" />}
                 label="New Customers"
                 value={formatNumber(cohortPerf.newCustomers)}
-                deltaPct={percentChange(cohortPerf.newCustomers, previousCohortPerf.newCustomers)}
                 hint={periodLabel}
                 tier="transaction"
                 showTierBadge={false}
               />
               <KpiCard
-                icon={<Repeat className="size-4" />}
+                icon={<Repeat className="size-[18px]" />}
                 label="Returning Customers"
                 value={formatNumber(cohortPerf.returningCustomers)}
-                deltaPct={percentChange(cohortPerf.returningCustomers, previousCohortPerf.returningCustomers)}
                 hint={periodLabel}
                 tier="transaction"
                 showTierBadge={false}
               />
               <KpiCard
-                icon={<Wallet className="size-4" />}
+                icon={<Wallet className="size-[18px]" />}
                 label="Avg. Customer Value"
                 value={formatAed(avgCustomerValue)}
-                deltaPct={percentChange(avgCustomerValue, avgCustomerValuePrev)}
                 hint={periodLabel}
                 tier="transaction"
                 showTierBadge={false}

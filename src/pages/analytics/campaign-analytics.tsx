@@ -16,7 +16,7 @@ import { OfferEconomicsPanel } from "@/components/analytics/offer-economics-pane
 import { ChannelBehaviourPanel } from "@/components/analytics/channel-behaviour-panel"
 import { PurchaseBehaviourPanel } from "@/components/analytics/purchase-behaviour-panel"
 import { HeatmapGrid } from "@/components/analytics/heatmap-grid"
-import { MidQualificationScatter } from "@/components/analytics/mid-qualification-scatter"
+import { LocationQualificationList } from "@/components/analytics/location-qualification-list"
 import { TerminalPerformancePanel } from "@/components/analytics/terminal-performance-panel"
 import { CustomerDemographicsPanel } from "@/components/analytics/customer-demographics-panel"
 import { DemographicPerformancePanel } from "@/components/analytics/demographic-performance-panel"
@@ -217,18 +217,23 @@ export default function CampaignAnalytics() {
           <TerminalPerformancePanel terminals={terminalStats} />
         </SectionCard>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          {hasChannelSplit && (
+        {hasChannelSplit && (
+          <div className="mt-6">
             <SectionCard title="Channel Performance" description="Online vs. in-store performance for this campaign">
               <ChannelBehaviourPanel stats={channelStats} metrics={["gmv", "transactions", "aov", "roi", "customers"]} />
             </SectionCard>
-          )}
-          {midStats.length > 1 && (
-            <SectionCard title="Location Qualification" description="Which locations qualify less than average, despite high volume" className={hasChannelSplit ? undefined : "lg:col-span-2"}>
-              <MidQualificationScatter mids={midStats} />
+          </div>
+        )}
+
+        {/* Full width, never paired 2-up — a 4-column table (location, volume, rate, status)
+            needs more room than half a row can offer without truncating a column. */}
+        {midStats.length > 1 && (
+          <div className="mt-6">
+            <SectionCard title="Location Qualification" description="Which locations qualify less than average, despite high volume">
+              <LocationQualificationList mids={midStats} />
             </SectionCard>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="mt-6">
           <SectionCard title="Day / Time Performance" description="GMV by day of week and time of day">

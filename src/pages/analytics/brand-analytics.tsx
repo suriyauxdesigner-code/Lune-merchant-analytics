@@ -184,8 +184,13 @@ export default function BrandAnalytics() {
 
           {/* Campaign Performance — aggregate trend across all of this brand's campaigns, then the full comparison table */}
           <section className="mt-12">
+            <div className="mb-5">
+              <h2 className="text-lg font-bold text-foreground">Campaign Performance</h2>
+              <p className="mt-1 text-sm text-muted-foreground">GMV and transaction trends across the selected period, and how each campaign compares</p>
+            </div>
+
             <SectionCard
-              title="Campaign Performance"
+              title="Performance Over Time"
               description="GMV and transaction trends across the selected period"
               contentClassName="pt-2"
               actions={<PillToggle value={chartMetric} onChange={setChartMetric} options={BRAND_CHART_OPTIONS} />}
@@ -193,17 +198,17 @@ export default function BrandAnalytics() {
               <PerformanceOverTimeChart data={chartSeries} metric={chartMetric} />
               {chartCaption && <p className="mt-3 border-t border-border/70 px-1 pt-4 text-sm font-medium text-foreground">{chartCaption}</p>}
             </SectionCard>
-          </section>
 
-          <section className="mt-6">
-            <SectionCard title="All Campaigns" description="Every live and completed campaign for this brand. Sort a column, or click a row to open its analytics.">
-              <CampaignPerformanceTable
-                rows={campaignRows}
-                onSelect={(id) => navigate(`/analytics/campaigns/${id}`)}
-                emptyTitle="No campaigns in this range"
-                emptyDescription={`${brand.name} has no active or completed campaigns in this range. Widen the date range to see more.`}
-              />
-            </SectionCard>
+            <div className="mt-6">
+              <SectionCard title="All Campaigns" description="Every live and completed campaign for this brand. Sort a column, or click a row to open its analytics.">
+                <CampaignPerformanceTable
+                  rows={campaignRows}
+                  onSelect={(id) => navigate(`/analytics/campaigns/${id}`)}
+                  emptyTitle="No campaigns in this range"
+                  emptyDescription={`${brand.name} has no active or completed campaigns in this range. Widen the date range to see more.`}
+                />
+              </SectionCard>
+            </div>
           </section>
 
           {/* Customer Insights — reach, demographics, value, frequency and retention */}
@@ -277,28 +282,40 @@ export default function BrandAnalytics() {
             </div>
           </section>
 
-          {/* Engagement — a distinct section from Customer Insights: how exposure converts to transactions */}
+          {/* Engagement — a distinct section from Customer Insights: how exposure converts to transactions, and why some don't qualify */}
           <section className="mt-12">
-            <SectionCard title="Engagement" description="How customers move from offer exposure to completed transactions, aggregated across this brand's campaigns">
+            <div className="mb-5">
+              <h2 className="text-lg font-bold text-foreground">Engagement</h2>
+              <p className="mt-1 text-sm text-muted-foreground">From offer exposure to rewarded transaction, and where it breaks down</p>
+            </div>
+
+            <SectionCard title="Engagement Funnel" description="How customers move from offer exposure to completed transactions, aggregated across this brand's campaigns">
               <EngagementFunnel perf={cohortPerf} />
             </SectionCard>
+
+            <div className="mt-6">
+              <SectionCard title="Why Transactions Didn't Qualify" description="Attempted transactions that didn't receive cashback, and why">
+                <QualificationBreakdown buckets={cohortPerf.qualification} />
+              </SectionCard>
+            </div>
           </section>
 
-          {/* Qualification Insights */}
-          <section className="mt-12 grid gap-6 lg:grid-cols-2">
-            <SectionCard title="Channel Behaviour" description="Online vs. in-store, compared">
-              <ChannelBehaviourPanel stats={channelStats} metrics={["gmv", "customers", "aov", "repeatRate"]} />
-            </SectionCard>
-            <SectionCard title="Why Transactions Didn't Qualify" description="Attempted transactions that didn't receive cashback, and why">
-              <QualificationBreakdown buckets={cohortPerf.qualification} />
-            </SectionCard>
-          </section>
-
-          {/* Location Performance */}
+          {/* Location & Channel — where and how this brand is performing */}
           <section className="mt-12">
+            <div className="mb-5">
+              <h2 className="text-lg font-bold text-foreground">Location &amp; Channel</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Which locations and channels are driving this brand's performance</p>
+            </div>
+
             <SectionCard title="Top Locations" description="This brand's strongest store locations, by GMV">
               <LocationPerformanceTable locations={locationStats} />
             </SectionCard>
+
+            <div className="mt-6">
+              <SectionCard title="Channel Behaviour" description="Online vs. in-store, compared">
+                <ChannelBehaviourPanel stats={channelStats} metrics={["gmv", "customers", "aov", "repeatRate"]} />
+              </SectionCard>
+            </div>
           </section>
         </>
       )}

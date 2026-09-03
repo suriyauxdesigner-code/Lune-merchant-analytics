@@ -13,11 +13,10 @@ const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: "transactions", label: "Transactions" },
 ]
 
-/** Who responded — age distribution and gender split. `compact` drops the metric toggle for lighter, campaign-level use. */
-export function CustomerDemographicsPanel({ demographics, compact = false }: { demographics: CustomerDemographics; compact?: boolean }) {
+/** Who responded — age distribution and gender split. */
+export function CustomerDemographicsPanel({ demographics }: { demographics: CustomerDemographics }) {
   const [metric, setMetric] = React.useState<Metric>("customers")
-  const activeMetric = compact ? "customers" : metric
-  const format = activeMetric === "gmv" ? formatCompactAed : formatNumber
+  const format = metric === "gmv" ? formatCompactAed : formatNumber
 
   const topAge = [...demographics.byAge].sort((a, b) => b.customers - a.customers)[0]
   const topAgeGmvShare = demographics.totalGmv > 0 && topAge ? (topAge.gmv / demographics.totalGmv) * 100 : 0
@@ -31,9 +30,9 @@ export function CustomerDemographicsPanel({ demographics, compact = false }: { d
       <div className="min-w-0">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs font-medium text-muted-foreground">Age distribution</p>
-          {!compact && <PillToggle value={metric} onChange={setMetric} options={METRIC_OPTIONS} />}
+          <PillToggle value={metric} onChange={setMetric} options={METRIC_OPTIONS} />
         </div>
-        <CategoryBarChart data={demographics.byAge.map((b) => ({ label: b.ageBand, value: b[activeMetric] }))} formatValue={format} height={200} />
+        <CategoryBarChart data={demographics.byAge.map((b) => ({ label: b.ageBand, value: b[metric] }))} formatValue={format} height={200} />
       </div>
       <div className="mt-6 min-w-0 border-t border-border pt-6">
         <p className="mb-3 text-xs font-medium text-muted-foreground">Gender</p>

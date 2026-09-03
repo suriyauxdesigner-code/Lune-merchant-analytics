@@ -265,16 +265,10 @@ export default function CampaignAnalytics() {
           <p className="mt-1 text-sm text-muted-foreground">Who responded to this campaign — scoped to this campaign alone, not the whole brand</p>
         </div>
 
-        {demographics && (
-          <SectionCard title="Campaign Customer Demographics" description="Age and gender breakdown of customers who responded">
-            <CustomerDemographicsPanel demographics={demographics} compact />
-          </SectionCard>
-        )}
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           {demographics && (
-            <SectionCard title="Demographic Performance" description="Which age segment performs best">
-              <DemographicPerformancePanel buckets={demographics.byAge} />
+            <SectionCard title="Campaign Customer Demographics" description="Age and gender breakdown of customers who responded">
+              <CustomerDemographicsPanel demographics={demographics} />
             </SectionCard>
           )}
           <SectionCard title="New vs. Returning" description="Acquisition vs. retention for this campaign" className={demographics ? undefined : "lg:col-span-2"}>
@@ -282,8 +276,13 @@ export default function CampaignAnalytics() {
           </SectionCard>
         </div>
 
-        <div className="mt-6">
-          <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction">
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {demographics && (
+            <SectionCard title="Demographic Performance" description="Which age segment performs best">
+              <DemographicPerformancePanel buckets={demographics.byAge} />
+            </SectionCard>
+          )}
+          <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction" className={demographics ? undefined : "lg:col-span-2"}>
             <PurchaseBehaviourPanel stats={amountStats} distribution={amountDistribution} />
           </SectionCard>
         </div>

@@ -8,8 +8,8 @@ export function CustomerValuePanel({ buckets }: { buckets: ValueBucket[] }) {
   const totalCustomers = buckets.reduce((s, b) => s + b.customers, 0)
 
   return (
-    <div>
-      <CategoryBarChart data={buckets.map((b) => ({ label: b.label, value: b.customers }))} formatValue={formatNumber} height={200} />
+    <div className="flex h-full flex-col">
+      <CategoryBarChart data={buckets.map((b) => ({ label: b.label, value: b.customers }))} formatValue={formatNumber} fill />
       <div className="mt-5 space-y-2 border-t border-border pt-4">
         {buckets.map((b) => {
           const customerShare = totalCustomers > 0 ? (b.customers / totalCustomers) * 100 : 0

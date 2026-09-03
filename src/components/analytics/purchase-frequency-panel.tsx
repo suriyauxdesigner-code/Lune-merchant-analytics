@@ -9,16 +9,16 @@ export function PurchaseFrequencyPanel({ buckets }: { buckets: FrequencyBucket[]
   const repeatRate = total > 0 ? (repeatCustomers / total) * 100 : 0
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Repeat purchase rate</p>
       <p className="mt-1 text-3xl font-bold text-foreground">{formatPercent(repeatRate, 0)}</p>
       <p className="mt-1 text-xs text-muted-foreground">{formatNumber(repeatCustomers)} customers made more than one purchase</p>
 
-      <div className="mt-5 border-t border-border pt-4">
+      <div className="mt-5 flex flex-1 flex-col border-t border-border pt-4">
         <CategoryBarChart
           data={buckets.map((b, i) => ({ label: b.label, value: total > 0 ? (b.customers / total) * 100 : 0, highlight: i > 0 }))}
           formatValue={(v) => formatPercent(v, 0)}
-          height={160}
+          fill
         />
       </div>
     </div>

@@ -22,17 +22,17 @@ export function CustomerDemographicsPanel({ demographics }: { demographics: Cust
   const topAgeGmvShare = demographics.totalGmv > 0 && topAge ? (topAge.gmv / demographics.totalGmv) * 100 : 0
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       {/* Age and Gender are always stacked, never side-by-side — this card lives inside an outer
           2-column grid (Customer Insights) that can halve its width at any breakpoint a side-by-side
           split might otherwise use, which previously squeezed the Gender donut into a column too
           narrow for it and let it overflow, uncontained, into the neighbouring card. */}
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs font-medium text-muted-foreground">Age distribution</p>
           <PillToggle value={metric} onChange={setMetric} options={METRIC_OPTIONS} />
         </div>
-        <CategoryBarChart data={demographics.byAge.map((b) => ({ label: b.ageBand, value: b[metric] }))} formatValue={format} height={200} />
+        <CategoryBarChart data={demographics.byAge.map((b) => ({ label: b.ageBand, value: b[metric] }))} formatValue={format} fill />
       </div>
       <div className="mt-6 min-w-0 border-t border-border pt-6">
         <p className="mb-3 text-xs font-medium text-muted-foreground">Gender</p>

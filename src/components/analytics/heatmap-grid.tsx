@@ -7,10 +7,9 @@ const SHORT_DAY: Record<string, string> = { Sunday: "Sun", Monday: "Mon", Tuesda
 
 const LABEL_W = 40
 const CELL_MIN_W = 48
-const CELL_MAX_W = 100
 const CELL_H = 36
 
-/** A day × time-of-day heatmap — darker cells mean more GMV. Modeled from each day's real total spread across a typical retail traffic curve. Cells grow to fill the available card width (capped) instead of a fixed size or an unbounded stretch. */
+/** A day × time-of-day heatmap — darker cells mean more GMV. Modeled from each day's real total spread across a typical retail traffic curve. Cells grow to fill the full available card width (only floored by a minimum, never capped) so the grid never leaves a dead strip of blank card on wide screens. */
 export function HeatmapGrid({ cells }: { cells: HeatCell[] }) {
   const blocks = [...new Set(cells.map((c) => c.block))]
   const max = Math.max(1, ...cells.map((c) => c.value))
@@ -28,8 +27,8 @@ export function HeatmapGrid({ cells }: { cells: HeatCell[] }) {
     <div>
       <div className="overflow-x-auto">
         <div
-          className="grid justify-center gap-1"
-          style={{ gridTemplateColumns: `${LABEL_W}px repeat(${blocks.length}, minmax(${CELL_MIN_W}px, ${CELL_MAX_W}px))`, minWidth: LABEL_W + blocks.length * CELL_MIN_W }}
+          className="grid gap-1"
+          style={{ gridTemplateColumns: `${LABEL_W}px repeat(${blocks.length}, minmax(${CELL_MIN_W}px, 1fr))`, minWidth: LABEL_W + blocks.length * CELL_MIN_W }}
         >
           <div />
           {blocks.map((b) => (

@@ -24,7 +24,7 @@ import { NewReturningPanel } from "@/components/analytics/new-returning-panel"
 import { KeyInsights } from "@/components/analytics/key-insights"
 import { TransactionSection } from "@/components/analytics/transaction-section"
 import { campaignById, brandById } from "@/lib/data"
-import { formatAed, formatDate, formatNumber, formatRatio } from "@/lib/utils"
+import { cn, formatAed, formatDate, formatNumber, formatRatio } from "@/lib/utils"
 import { durationLabel } from "@/lib/analytics-utils"
 import {
   getCampaignPerformance,
@@ -246,22 +246,37 @@ export default function CampaignAnalytics() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {demographics && (
-            <SectionCard title="Campaign Customer Demographics" description="Age and gender breakdown of customers who responded">
+            <SectionCard
+              title="Campaign Customer Demographics"
+              description="Age and gender breakdown of customers who responded"
+              className="flex h-full flex-col"
+              contentClassName="flex-1 min-h-0"
+            >
               <CustomerDemographicsPanel demographics={demographics} />
             </SectionCard>
           )}
-          <SectionCard title="New vs. Returning" description="Acquisition vs. retention for this campaign" className={demographics ? undefined : "lg:col-span-2"}>
+          <SectionCard
+            title="New vs. Returning"
+            description="Acquisition vs. retention for this campaign"
+            className={cn("flex h-full flex-col", !demographics && "lg:col-span-2")}
+            contentClassName="flex-1 min-h-0"
+          >
             <NewReturningPanel stats={newReturningStats} />
           </SectionCard>
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {demographics && (
-            <SectionCard title="Demographic Performance" description="Which age segment performs best">
+            <SectionCard title="Demographic Performance" description="Which age segment performs best" className="flex h-full flex-col" contentClassName="flex-1 min-h-0">
               <DemographicPerformancePanel buckets={demographics.byAge} />
             </SectionCard>
           )}
-          <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction" className={demographics ? undefined : "lg:col-span-2"}>
+          <SectionCard
+            title="Purchase Behaviour"
+            description="How much customers are spending per transaction"
+            className={cn("flex h-full flex-col", !demographics && "lg:col-span-2")}
+            contentClassName="flex-1 min-h-0"
+          >
             <PurchaseBehaviourPanel stats={amountStats} distribution={amountDistribution} />
           </SectionCard>
         </div>

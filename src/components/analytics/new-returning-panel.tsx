@@ -15,7 +15,7 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
   const returningPct = totalCustomers > 0 ? (returningStat.customers / totalCustomers) * 100 : 0
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <div className="flex items-baseline gap-6">
         <div>
           <p className="text-2xl font-bold text-foreground sm:text-3xl">{formatPercent(newPct, 0)}</p>
@@ -39,17 +39,19 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
         </p>
       )}
 
-      <div className="mt-5 flex flex-wrap items-start gap-8">
-        <div className="shrink-0">
-          <DonutChart
-            segments={stats.map((s) => ({ label: s.segment, value: s.customers, color: SEGMENT_COLORS[s.segment] }))}
-            formatValue={formatNumber}
-            centerLabel="Customers"
-            centerValue={formatNumber(totalCustomers)}
-            size={140}
-          />
-        </div>
-        <div className="min-w-[240px] flex-1 space-y-3">
+      {/* Donut always sits above the New/Returning detail cards, never beside them — a side-by-side
+          layout here used to depend on how much width this panel happened to get (which flips
+          between stacked and side-by-side as the viewport changes), so the position visibly jumped
+          around depending on screen size. Stacking unconditionally keeps it identical everywhere. */}
+      <div className="mt-6 flex-1">
+        <DonutChart
+          segments={stats.map((s) => ({ label: s.segment, value: s.customers, color: SEGMENT_COLORS[s.segment] }))}
+          formatValue={formatNumber}
+          centerLabel="Customers"
+          centerValue={formatNumber(totalCustomers)}
+          size={200}
+        />
+        <div className="mt-5 space-y-3">
           {stats.map((s) => {
             const avgSpend = s.customers > 0 ? s.gmv / s.customers : 0
             const avgTx = s.customers > 0 ? s.transactions / s.customers : 0

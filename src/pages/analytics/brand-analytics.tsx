@@ -256,17 +256,22 @@ export default function BrandAnalytics() {
               />
             </KpiGrid>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              <SectionCard title="Customer Demographics" description="Age and gender breakdown of customers reached">
+            <div className="mt-6 grid items-stretch gap-6 lg:grid-cols-2">
+              <SectionCard title="Customer Demographics" description="Age and gender breakdown of customers reached" className="flex h-full flex-col" contentClassName="flex-1 min-h-0">
                 <CustomerDemographicsPanel demographics={demographics} />
               </SectionCard>
-              <SectionCard title="New vs. Returning Customers" description="Acquisition vs. retention, and how each segment's value compares">
+              <SectionCard
+                title="New vs. Returning Customers"
+                description="Acquisition vs. retention, and how each segment's value compares"
+                className="flex h-full flex-col"
+                contentClassName="flex-1 min-h-0"
+              >
                 <NewReturningPanel stats={newReturningStats} />
               </SectionCard>
-              <SectionCard title="Customer Value" description="How much customers spend, in total, across all campaigns">
+              <SectionCard title="Customer Value" description="How much customers spend, in total, across all campaigns" className="flex h-full flex-col" contentClassName="flex-1 min-h-0">
                 <CustomerValuePanel buckets={valueBuckets} />
               </SectionCard>
-              <SectionCard title="Purchase Frequency" description="How many times customers purchased">
+              <SectionCard title="Purchase Frequency" description="How many times customers purchased" className="flex h-full flex-col" contentClassName="flex-1 min-h-0">
                 <PurchaseFrequencyPanel buckets={freqBuckets} />
               </SectionCard>
             </div>

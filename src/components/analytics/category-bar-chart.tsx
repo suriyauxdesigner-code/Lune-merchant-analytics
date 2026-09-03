@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { cn } from "@/lib/utils"
 
 export type CategoryDatum = { label: string; value: number; highlight?: boolean }
 
@@ -9,15 +10,22 @@ export function CategoryBarChart({
   color = "hsl(160 62% 22%)",
   highlightColor = "hsl(38 92% 45%)",
   height = 220,
+  fill = false,
 }: {
   data: CategoryDatum[]
   formatValue: (v: number) => string
   color?: string
   highlightColor?: string
+  /** Fixed pixel height. Ignored when `fill` is true. */
   height?: number
+  /** Grow to fill a flex-column parent's available height instead of a fixed height — for panels
+   * that sit in a CSS Grid row next to a taller sibling, so the chart uses the stretched space
+   * instead of leaving it blank below. Keeps a sane minimum height so it never collapses when
+   * there's no extra space to fill (e.g. outside a stretched grid row). */
+  fill?: boolean
 }) {
   return (
-    <div style={{ height }} className="w-full">
+    <div style={fill ? undefined : { height }} className={cn("w-full", fill && "min-h-[180px] flex-1")}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="hsl(220 16% 93%)" />

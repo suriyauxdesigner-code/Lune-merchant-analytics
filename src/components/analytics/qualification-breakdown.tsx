@@ -1,5 +1,4 @@
 import { Info } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatNumber } from "@/lib/utils"
 import type { QualificationBucket, QualificationReason } from "@/lib/mock-performance"
 
@@ -66,14 +65,7 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
               {meaning && <p className="mt-1.5 text-xs text-muted-foreground">{meaning}</p>}
               {tip && (
                 <p className="mt-1 flex items-start gap-1 text-xs font-medium text-foreground">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="mt-0.5 shrink-0 text-muted-foreground">
-                        <Info className="size-3.5" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>{tip}</TooltipContent>
-                  </Tooltip>
+                  <Info className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
                   Tip: {tip}
                 </p>
               )}

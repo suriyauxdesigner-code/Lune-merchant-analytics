@@ -1,3 +1,4 @@
+import { MetricTiles } from "./metric-tiles"
 import { formatAed, formatPercent } from "@/lib/utils"
 import type { OfferEconomics } from "@/lib/transaction-stats"
 import type { Campaign } from "@/lib/types"
@@ -25,25 +26,19 @@ export function OfferEconomicsPanel({ campaign, economics }: { campaign: Campaig
         A high share near the minimum spend suggests customers are shopping to the threshold; a high share reaching the cap means the offer may be under-rewarding larger baskets.
       </p>
 
-      <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground sm:grid-cols-3">
-        <span>
-          Cashback rate <span className="font-medium text-foreground">{campaign.cashbackPercentage}%</span>
-        </span>
-        <span>
-          Avg. cashback / transaction <span className="font-medium text-foreground">{formatAed(economics.avgCashbackPerTransaction)}</span>
-        </span>
-        <span>
-          Median cashback / transaction <span className="font-medium text-foreground">{formatAed(economics.medianCashbackPerTransaction)}</span>
-        </span>
-        <span>
-          Minimum spend <span className="font-medium text-foreground">{campaign.minimumSpend ? formatAed(campaign.minimumSpend) : "None"}</span>
-        </span>
-        <span>
-          Cashback cap <span className="font-medium text-foreground">{formatAed(campaign.cashbackCap)}</span>
-        </span>
-        <span>
-          Average order value <span className="font-medium text-foreground">{formatAed(economics.aov)}</span>
-        </span>
+      <div className="mt-5 border-t border-border pt-4">
+        <MetricTiles
+          columns={3}
+          showTierBadges={false}
+          items={[
+            { key: "cashback-rate", label: "Cashback rate", value: `${campaign.cashbackPercentage}%` },
+            { key: "avg-cashback", label: "Avg. cashback / transaction", value: formatAed(economics.avgCashbackPerTransaction) },
+            { key: "median-cashback", label: "Median cashback / transaction", value: formatAed(economics.medianCashbackPerTransaction) },
+            { key: "min-spend", label: "Minimum spend", value: campaign.minimumSpend ? formatAed(campaign.minimumSpend) : "None" },
+            { key: "cashback-cap", label: "Cashback cap", value: formatAed(campaign.cashbackCap) },
+            { key: "aov", label: "Average order value", value: formatAed(economics.aov) },
+          ]}
+        />
       </div>
     </div>
   )

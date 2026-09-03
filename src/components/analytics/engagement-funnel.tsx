@@ -45,7 +45,7 @@ export function EngagementFunnel({ perf }: { perf: Perf }) {
               return (
                 <div key={stage.key}>
                   <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{stage.label}</p>
-                  <p className="mt-1 whitespace-nowrap text-lg font-bold text-foreground">{formatNumber(values[i])}</p>
+                  <p className="mt-1 whitespace-nowrap text-2xl font-bold text-foreground">{formatNumber(values[i])}</p>
                   <p className="mt-1 flex h-4 items-center gap-1 text-xs font-medium text-muted-foreground">
                     {conversionFromPrev != null && (
                       <>

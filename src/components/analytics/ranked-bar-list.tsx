@@ -38,12 +38,12 @@ export function RankedBarList({
                 <span className="text-xs text-muted-foreground">{i + 1}</span>
                 <span className="truncate">{item.label}</span>
               </span>
-              <span className="shrink-0 whitespace-nowrap text-muted-foreground">
-                {formatValue(item.value)}
-                {item.sublabel && <span className="ml-1.5">· {item.sublabel}</span>}
+              <span className="shrink-0 whitespace-nowrap">
+                <span className="font-semibold tabular-nums text-foreground">{formatValue(item.value)}</span>
+                {item.sublabel && <span className="ml-1.5 text-muted-foreground">· {item.sublabel}</span>}
               </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full transition-all" style={{ width: `${widthPct}%`, backgroundColor: item.color ?? color }} />
             </div>
           </Tag>

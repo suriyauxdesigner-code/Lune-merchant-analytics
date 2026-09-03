@@ -24,24 +24,26 @@ export function CustomerDemographicsPanel({ demographics, compact = false }: { d
 
   return (
     <div>
-      <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-medium text-muted-foreground">Age distribution</p>
-            {!compact && <PillToggle value={metric} onChange={setMetric} options={METRIC_OPTIONS} />}
-          </div>
-          <CategoryBarChart data={demographics.byAge.map((b) => ({ label: b.ageBand, value: b[activeMetric] }))} formatValue={format} height={200} />
+      {/* Age and Gender are always stacked, never side-by-side — this card lives inside an outer
+          2-column grid (Customer Insights) that can halve its width at any breakpoint a side-by-side
+          split might otherwise use, which previously squeezed the Gender donut into a column too
+          narrow for it and let it overflow, uncontained, into the neighbouring card. */}
+      <div className="min-w-0">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-medium text-muted-foreground">Age distribution</p>
+          {!compact && <PillToggle value={metric} onChange={setMetric} options={METRIC_OPTIONS} />}
         </div>
-        <div>
-          <p className="mb-3 text-xs font-medium text-muted-foreground">Gender</p>
-          <DonutChart
-            segments={demographics.byGender.map((g) => ({ label: g.gender, value: g.customers, color: GENDER_COLORS[g.gender] }))}
-            formatValue={formatNumber}
-            centerLabel="Customers"
-            centerValue={formatCompactAed(demographics.totalCustomers).replace("AED ", "")}
-            size={150}
-          />
-        </div>
+        <CategoryBarChart data={demographics.byAge.map((b) => ({ label: b.ageBand, value: b[activeMetric] }))} formatValue={format} height={200} />
+      </div>
+      <div className="mt-6 min-w-0 border-t border-border pt-6">
+        <p className="mb-3 text-xs font-medium text-muted-foreground">Gender</p>
+        <DonutChart
+          segments={demographics.byGender.map((g) => ({ label: g.gender, value: g.customers, color: GENDER_COLORS[g.gender] }))}
+          formatValue={formatNumber}
+          centerLabel="Customers"
+          centerValue={formatCompactAed(demographics.totalCustomers).replace("AED ", "")}
+          size={140}
+        />
       </div>
       {topAge && (
         <p className="mt-5 border-t border-border pt-4 text-sm font-medium text-foreground">

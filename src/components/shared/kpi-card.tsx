@@ -49,17 +49,17 @@ export function KpiCard({
   showTierBadge?: boolean
 }) {
   return (
-    <div className={cn("w-full rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={cn("w-full rounded-[var(--radius)] border border-border bg-card p-4 shadow-card", className)}>
+      <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold text-foreground">{label}</p>
         {icon && <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">{icon}</div>}
       </div>
-      <div className="mt-3 flex items-baseline gap-2">
-        <p className={cn("font-bold text-foreground", size === "lg" ? "text-2xl" : "text-lg")}>{value}</p>
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <p className={cn("font-extrabold tracking-tight text-foreground", size === "lg" ? "text-3xl" : "text-xl")}>{value}</p>
         {deltaPct != null && <DeltaBadge pct={deltaPct} />}
       </div>
-      {hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}
-      {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-2" />}
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-1.5" />}
     </div>
   )
 }
@@ -111,12 +111,12 @@ export function KpiGrid({ children, className }: { children: ReactNode; classNam
   }
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-3", className)}>
       {rows.map((rowItems, i) => {
         const cols = rowItems.length
         const smCols = Math.min(3, cols)
         return (
-          <div key={i} className={cn("grid grid-cols-2 gap-4", SM_COLS_CLASS[smCols], LG_COLS_CLASS[cols])}>
+          <div key={i} className={cn("grid grid-cols-2 gap-3", SM_COLS_CLASS[smCols], LG_COLS_CLASS[cols])}>
             {rowItems}
           </div>
         )

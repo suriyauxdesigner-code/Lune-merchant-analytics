@@ -19,22 +19,24 @@ export function PurchaseBehaviourPanel({ stats, distribution }: { stats: AmountS
         ]}
       />
       {distribution.length > 0 && (
-        <div className="mt-5 space-y-3">
+        <div className="mt-6 border-t border-border pt-5">
           <p className="text-xs font-medium text-muted-foreground">Transaction value distribution</p>
-          {distribution.map((bucket) => {
-            const widthPct = Math.max(3, Math.round((bucket.count / maxCount) * 100))
-            return (
-              <div key={bucket.label}>
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{bucket.label}</span>
-                  <span className="text-foreground">{formatNumber(bucket.count)}</span>
+          <div className="mt-3 space-y-4">
+            {distribution.map((bucket) => {
+              const widthPct = Math.max(3, Math.round((bucket.count / maxCount) * 100))
+              return (
+                <div key={bucket.label}>
+                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-medium text-foreground">{bucket.label}</span>
+                    <span className="text-base font-semibold tabular-nums text-foreground">{formatNumber(bucket.count)}</span>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${widthPct}%` }} />
+                  </div>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${widthPct}%` }} />
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
     </div>

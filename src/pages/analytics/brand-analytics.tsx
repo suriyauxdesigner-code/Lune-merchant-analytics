@@ -48,11 +48,10 @@ const BRAND_CHART_OPTIONS: { value: ChartMetric; label: string }[] = [
   { value: "transactions", label: "Transactions" },
 ]
 
-const TOP_CAMPAIGN_OPTIONS: { value: TopCampaignMetric; label: string }[] = [
-  { value: "roi", label: "ROI" },
-  { value: "gmv", label: "GMV" },
-  { value: "transactions", label: "Transactions" },
-]
+// Top Campaign is a single view showing every key metric at once (GMV, Transactions, ROI,
+// Cashback) — GMV is the ranking criterion, matching the default used elsewhere on this page
+// (Brand Performance, Campaign Performance).
+const TOP_CAMPAIGN_METRIC: TopCampaignMetric = "gmv"
 
 /**
  * Brand Analytics — the main Analytics landing experience. "How is this brand performing, which
@@ -66,7 +65,6 @@ export default function BrandAnalytics() {
   const brand = brandById(brandId)
   const [filters, setFilters] = React.useState(DEFAULT_FILTERS)
   const [chartMetric, setChartMetric] = React.useState<ChartMetric>("gmv")
-  const [topMetric, setTopMetric] = React.useState<TopCampaignMetric>("roi")
 
   const allCampaigns = React.useMemo(() => campaignsForBrand(brandId), [brandId])
   const filteredCampaigns = React.useMemo(() => applyCampaignFilters(allCampaigns, filters), [allCampaigns, filters])
@@ -104,16 +102,12 @@ export default function BrandAnalytics() {
   const rankedCampaigns = React.useMemo(() => performanceCampaigns.map((c) => ({ campaign: c, perf: getCampaignPerformance(c) })), [performanceCampaigns])
 
   // Top Campaign is a summary highlight of this same dataset — the campaign with the strongest
-  // value on whichever metric is selected. Campaign Performance below always lists every
-  // campaign, including this one; the two are a highlight and a full comparison, not two
-  // different datasets.
+  // GMV. Campaign Performance below always lists every campaign, including this one; the two are
+  // a highlight and a full comparison, not two different datasets.
   const topEntry = React.useMemo(() => {
     if (rankedCampaigns.length === 0) return null
-    return [...rankedCampaigns].sort((a, b) => {
-      const value = (p: (typeof rankedCampaigns)[number]["perf"]) => (topMetric === "roi" ? p.roi : topMetric === "gmv" ? p.transactionValue : p.transactions)
-      return value(b.perf) - value(a.perf)
-    })[0]
-  }, [rankedCampaigns, topMetric])
+    return [...rankedCampaigns].sort((a, b) => b.perf.transactionValue - a.perf.transactionValue)[0]
+  }, [rankedCampaigns])
 
   const campaignRows: CampaignPerformanceRow[] = React.useMemo(
     () =>
@@ -280,17 +274,13 @@ export default function BrandAnalytics() {
 
           {/* 3. Top Campaign — a single visual highlight, not another ranked list */}
           <section className="mt-12">
-            <SectionCard
-              title="Top Campaign"
-              description="This brand's strongest campaign by the selected metric"
-              actions={<PillToggle value={topMetric} onChange={setTopMetric} options={TOP_CAMPAIGN_OPTIONS} />}
-            >
+            <SectionCard title="Top Campaign" description="This brand's strongest campaign by GMV">
               {topEntry ? (
                 <TopCampaignCard
                   name={topEntry.campaign.name}
                   status={topEntry.campaign.status}
                   perf={topEntry.perf}
-                  metric={topMetric}
+                  metric={TOP_CAMPAIGN_METRIC}
                   onSelect={() => navigate(`/analytics/campaigns/${topEntry.campaign.id}`)}
                 />
               ) : (

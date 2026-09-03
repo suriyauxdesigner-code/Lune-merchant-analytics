@@ -170,10 +170,10 @@ export default function CampaignAnalytics() {
         <KpiCard icon={<TrendingUp className="size-4" />} label="GMV" value={formatAed(perf.transactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
         <KpiCard icon={<Receipt className="size-4" />} label="Transactions" value={formatNumber(perf.transactions)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
         <KpiCard icon={<Target className="size-4" />} label="ROI" value={formatRatio(perf.roi)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
-        <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} size="md" />
-        <KpiCard icon={<Gauge className="size-4" />} label="Budget Used" value={formatPercent(perf.utilizationPct)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} size="md" />
-        <KpiCard icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} size="md" />
-        <KpiCard icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} size="md" />
+        <KpiCard icon={<Coins className="size-4" />} label="Cashback Issued" value={formatAed(perf.cashbackIssued)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Gauge className="size-4" />} label="Budget Used" value={formatPercent(perf.utilizationPct)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<Wallet className="size-4" />} label="Budget Remaining" value={formatAed(perf.remainingBudget)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
+        <KpiCard icon={<BarChart3 className="size-4" />} label="Avg. Transaction Value" value={formatAed(perf.avgTransactionValue)} hint="Campaign lifetime" tier="transaction" showTierBadge={false} />
       </KpiGrid>
 
       {/* Campaign Overview — trend and pacing behind the KPIs above */}

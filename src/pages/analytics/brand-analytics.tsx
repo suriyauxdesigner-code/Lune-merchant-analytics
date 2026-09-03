@@ -208,7 +208,6 @@ export default function BrandAnalytics() {
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
-              size="md"
             />
             <KpiCard
               icon={<Users className="size-4" />}
@@ -218,7 +217,6 @@ export default function BrandAnalytics() {
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
-              size="md"
             />
             <KpiCard
               label="Avg. Transaction Value"
@@ -227,7 +225,6 @@ export default function BrandAnalytics() {
               hint={periodLabel}
               tier="transaction"
               showTierBadge={false}
-              size="md"
             />
           </KpiGrid>
 
@@ -271,7 +268,6 @@ export default function BrandAnalytics() {
                 hint={`Shown an offer · ${periodLabel}`}
                 tier="transaction"
                 showTierBadge={false}
-                size="md"
               />
               <KpiCard
                 icon={<Users className="size-4" />}
@@ -281,7 +277,6 @@ export default function BrandAnalytics() {
                 hint={periodLabel}
                 tier="transaction"
                 showTierBadge={false}
-                size="md"
               />
               <KpiCard
                 icon={<UserPlus className="size-4" />}
@@ -291,7 +286,6 @@ export default function BrandAnalytics() {
                 hint={periodLabel}
                 tier="transaction"
                 showTierBadge={false}
-                size="md"
               />
               <KpiCard
                 icon={<Repeat className="size-4" />}
@@ -301,7 +295,6 @@ export default function BrandAnalytics() {
                 hint={periodLabel}
                 tier="transaction"
                 showTierBadge={false}
-                size="md"
               />
               <KpiCard
                 icon={<Wallet className="size-4" />}
@@ -311,7 +304,6 @@ export default function BrandAnalytics() {
                 hint={periodLabel}
                 tier="transaction"
                 showTierBadge={false}
-                size="md"
               />
             </KpiGrid>
 

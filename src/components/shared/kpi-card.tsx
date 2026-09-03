@@ -16,9 +16,13 @@ const TIER_SHORT_LABEL: Record<Exclude<DataTier, "live">, string> = {
 /**
  * A single KPI tile used everywhere across Analytics. Every metric — live,
  * transaction-derived, or future-instrumentation — renders with a real
- * (mock, for now) value in the identical card style. The only difference is
- * a small tier badge for anything that isn't live product data yet. We never
- * hide, disable, grey out, or lock a widget.
+ * (mock, for now) value in the identical card style, at the identical
+ * typography and spacing. There is no "headline vs. secondary" size variant:
+ * every KPI value across Brand Analytics and Campaign Analytics reads at the
+ * same weight, so a page's hierarchy comes from section grouping and order,
+ * never from shrinking some tiles' numbers. The only difference between
+ * tiles is a small tier badge for anything that isn't live product data yet.
+ * We never hide, disable, grey out, or lock a widget.
  */
 export function KpiCard({
   label,
@@ -29,7 +33,6 @@ export function KpiCard({
   hint,
   deltaPct,
   className,
-  size = "lg",
   showTierBadge = true,
 }: {
   label: string
@@ -43,23 +46,21 @@ export function KpiCard({
   /** % change vs. the previous period of equal length. Omit (or null) when there's no prior-period activity to compare against. */
   deltaPct?: number | null
   className?: string
-  /** "lg" (default) for headline metrics, "md" for secondary metrics that should carry less visual weight. */
-  size?: "lg" | "md"
   /** Set false to suppress the per-tile tier badge — use when a single caption below a group covers it instead. */
   showTierBadge?: boolean
 }) {
   return (
-    <div className={cn("w-full rounded-[var(--radius)] border border-border bg-card p-4 shadow-card", className)}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-foreground">{label}</p>
-        {icon && <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">{icon}</div>}
+    <div className={cn("w-full min-w-0 rounded-[var(--radius)] border border-border bg-card p-6 shadow-card", className)}>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[18px] font-medium leading-6 text-foreground">{label}</p>
+        {icon && <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary">{icon}</div>}
       </div>
-      <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <p className={cn("font-extrabold tracking-tight text-foreground", size === "lg" ? "text-3xl" : "text-xl")}>{value}</p>
+      <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <p className="min-w-0 break-words text-[40px] font-semibold leading-[48px] text-foreground">{value}</p>
         {deltaPct != null && <DeltaBadge pct={deltaPct} />}
       </div>
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-      {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-1.5" />}
+      {hint && <p className="mt-2 text-base leading-6 font-normal text-muted-foreground">{hint}</p>}
+      {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-2" />}
     </div>
   )
 }

@@ -42,18 +42,18 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
   return (
     <div>
       {attempted != null && (
-        <div className="mb-5 grid grid-cols-3 gap-3 border-b border-border pb-5">
+        <div className="mb-6 grid grid-cols-3 gap-3 border-b border-border pb-6">
           <div>
-            <p className="text-xs text-muted-foreground">Attempted</p>
-            <p className="mt-1 text-lg font-bold text-foreground">{formatNumber(attempted)}</p>
+            <p className="text-xs font-medium text-muted-foreground">Attempted</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{formatNumber(attempted)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Qualified</p>
-            <p className="mt-1 text-lg font-bold text-success">{formatNumber(qualified!)}</p>
+            <p className="text-xs font-medium text-muted-foreground">Qualified</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-success">{formatNumber(qualified!)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Rejected</p>
-            <p className="mt-1 text-lg font-bold text-destructive">{formatNumber(rejected)}</p>
+            <p className="text-xs font-medium text-muted-foreground">Rejected</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-destructive">{formatNumber(rejected)}</p>
           </div>
         </div>
       )}
@@ -64,16 +64,17 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
           const tip = TIP[bucket.reason]
           return (
             <div key={bucket.reason}>
-              <div className="mb-1.5 flex items-center justify-between text-sm">
-                <span className="font-semibold text-foreground">{bucket.reason}</span>
-                <span className="text-muted-foreground">
-                  {formatNumber(bucket.count)} · {pct}%
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <span className="text-base font-semibold text-foreground">{bucket.reason}</span>
+                <span className="shrink-0 whitespace-nowrap">
+                  <span className="text-base font-semibold tabular-nums text-foreground">{formatNumber(bucket.count)}</span>
+                  <span className="ml-1 text-sm text-muted-foreground">· {pct}%</span>
                 </span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
                 <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }} />
               </div>
-              {meaning && <p className="mt-1.5 text-xs text-muted-foreground">{meaning}</p>}
+              {meaning && <p className="mt-2 text-xs text-muted-foreground">{meaning}</p>}
               {tip && (
                 <p className="mt-1 flex items-start gap-1 text-xs font-medium text-foreground">
                   <Info className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />

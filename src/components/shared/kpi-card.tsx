@@ -52,7 +52,7 @@ export function KpiCard({
           <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary [&>svg]:size-[18px]">{icon}</div>
         )}
       </div>
-      <p className="mt-5 min-w-0 truncate text-[28px] font-semibold leading-8 tabular-nums text-foreground">{value}</p>
+      <p className="mt-3 min-w-0 truncate text-[28px] font-semibold leading-8 tabular-nums text-foreground">{value}</p>
       {hint && <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{hint}</p>}
       {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-2" />}
     </div>

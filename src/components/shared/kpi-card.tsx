@@ -45,13 +45,15 @@ export function KpiCard({
   showTierBadge?: boolean
 }) {
   return (
-    <div className={cn("w-full min-w-0 rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[15px] font-medium leading-5 text-foreground">{label}</p>
-        {icon && (
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary [&>svg]:size-[18px]">{icon}</div>
-        )}
-      </div>
+    <div className={cn("relative w-full min-w-0 rounded-[var(--radius)] border border-border bg-card p-5 shadow-card", className)}>
+      {/* The icon is positioned absolutely, out of the text flow — when it shared a flex row with
+          the title, the row's height was forced up to the icon's 40px regardless of the title's
+          own (much shorter) line height, pushing the value down by that difference no matter how
+          small its own margin-top was. */}
+      <p className="pr-14 text-[15px] font-medium leading-5 text-foreground">{label}</p>
+      {icon && (
+        <div className="absolute right-5 top-5 flex size-10 items-center justify-center rounded-[var(--radius-sm)] bg-secondary text-primary [&>svg]:size-[18px]">{icon}</div>
+      )}
       <p className="mt-1 min-w-0 truncate text-[28px] font-semibold leading-8 tabular-nums text-foreground">{value}</p>
       {hint && <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{hint}</p>}
       {tier !== "live" && showTierBadge && <TierBadge tier={tier} label={tierLabel} className="mt-2" />}

@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { cn } from "@/lib/utils"
 
 export type CategoryDatum = { label: string; value: number; highlight?: boolean }
@@ -27,7 +27,7 @@ export function CategoryBarChart({
   return (
     <div style={fill ? undefined : { height }} className={cn("w-full", fill && "min-h-[180px] flex-1")}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <BarChart data={data} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="hsl(220 16% 93%)" />
           <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} tick={{ fontSize: 12, fill: "hsl(220 9% 46%)" }} />
           <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: "hsl(220 9% 46%)" }} width={52} tickFormatter={formatValue} />
@@ -37,6 +37,7 @@ export function CategoryBarChart({
             labelStyle={{ fontWeight: 600, marginBottom: 4, color: "hsl(220 20% 12%)" }}
           />
           <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={56}>
+            <LabelList dataKey="value" position="top" formatter={(v: number) => formatValue(v)} style={{ fontSize: 12, fontWeight: 600, fill: "hsl(220 20% 20%)" }} />
             {data.map((d) => (
               <Cell key={d.label} fill={d.highlight ? highlightColor : color} />
             ))}

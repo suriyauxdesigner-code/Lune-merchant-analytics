@@ -52,8 +52,9 @@ export function DonutChart({
                 <span className={cn("size-2.5 shrink-0 rounded-full")} style={{ backgroundColor: seg.color }} />
                 <span className="truncate text-foreground">{seg.label}</span>
               </span>
-              <span className="shrink-0 text-muted-foreground">
-                {formatValue(seg.value)} <span className="text-foreground">· {Math.round(pct)}%</span>
+              <span className="shrink-0 whitespace-nowrap">
+                <span className="font-semibold tabular-nums text-foreground">{formatValue(seg.value)}</span>
+                <span className="ml-1 text-muted-foreground">· {Math.round(pct)}%</span>
               </span>
             </div>
           )

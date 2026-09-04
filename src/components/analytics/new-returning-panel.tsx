@@ -61,18 +61,18 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
                   <span className="size-2 rounded-full" style={{ backgroundColor: SEGMENT_COLORS[s.segment] }} />
                   {s.segment}
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                <div className="mt-2.5 grid grid-cols-2 gap-2.5 text-sm text-muted-foreground">
                   <span>
-                    GMV <span className="font-medium text-foreground">{formatAed(s.gmv)}</span>
+                    GMV <span className="font-semibold tabular-nums text-foreground">{formatAed(s.gmv)}</span>
                   </span>
                   <span>
-                    Avg. spend <span className="font-medium text-foreground">{formatAed(avgSpend)}</span>
+                    Avg. spend <span className="font-semibold tabular-nums text-foreground">{formatAed(avgSpend)}</span>
                   </span>
                   <span>
-                    Transactions <span className="font-medium text-foreground">{formatNumber(s.transactions)}</span>
+                    Transactions <span className="font-semibold tabular-nums text-foreground">{formatNumber(s.transactions)}</span>
                   </span>
                   <span>
-                    Purchases / customer <span className="font-medium text-foreground">{avgTx.toFixed(1)}</span>
+                    Purchases / customer <span className="font-semibold tabular-nums text-foreground">{avgTx.toFixed(1)}</span>
                   </span>
                 </div>
               </div>

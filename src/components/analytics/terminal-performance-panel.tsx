@@ -71,7 +71,7 @@ export function TerminalPerformancePanel({ terminals }: { terminals: TerminalSta
                     <span className="text-muted-foreground">Terminal {t.terminalId ?? "—"}</span>
                     <span className="flex items-center gap-4 tabular-nums text-muted-foreground">
                       <span>{formatNumber(t.transactions)} txns</span>
-                      <span className="text-foreground">{formatAed(t.gmv)}</span>
+                      <span className="font-semibold text-foreground">{formatAed(t.gmv)}</span>
                       <span>{formatPercent(t.qualificationRate, 0)} qualified</span>
                     </span>
                   </div>

@@ -38,7 +38,7 @@ function BarRow({ value, max, color, label }: { value: number; max: number; colo
       <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
       </div>
-      <span className="w-20 shrink-0 text-right text-xs font-medium text-foreground">{label}</span>
+      <span className="w-28 shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums text-foreground">{label}</span>
     </div>
   )
 }

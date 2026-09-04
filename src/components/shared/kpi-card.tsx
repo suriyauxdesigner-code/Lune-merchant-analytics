@@ -83,13 +83,3 @@ export function TierBadge({ tier, label, className }: { tier: Exclude<DataTier, 
     </span>
   )
 }
-
-/** Small neutral eyebrow tag used above/beside a group of prototype widgets. */
-export function PrototypeTag({ label = "Prototype · Sample data" }: { label?: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-      <span className="size-1.5 rounded-full bg-muted-foreground/50" />
-      {label}
-    </span>
-  )
-}

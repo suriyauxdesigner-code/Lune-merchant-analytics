@@ -138,7 +138,7 @@ export default function BrandAnalytics() {
 
   return (
     <div>
-      <PageHeader title="Analytics" showPrototypeTag />
+      <PageHeader title="Analytics" />
 
       {/* The brand's context — a secondary heading, not the page title. No brand switcher: a
           merchant user only has access to their own brand. */}

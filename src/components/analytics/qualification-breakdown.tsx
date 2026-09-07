@@ -1,3 +1,5 @@
+import { Info } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatNumber } from "@/lib/utils"
 import type { QualificationBucket, QualificationReason } from "@/lib/mock-performance"
 
@@ -28,9 +30,11 @@ const TIP: Partial<Record<QualificationReason, string>> = {
 
 /**
  * "Why didn't this transaction qualify" — helps a merchant spot optimization opportunities in
- * their own rules. Each reason shows its meaning and, where one exists, an actionable tip
- * directly in the body text — never only on hover. `qualified` is optional: pass it (Campaign
- * Analytics) to show the attempted/qualified/rejected eligibility summary above the breakdown.
+ * their own rules. Each reason's plain-language meaning sits behind an info icon next to its
+ * title (hover to read it); the actionable tip, where one exists, is the one thing that's always
+ * visible as helper text, since it's the part worth acting on rather than just understanding.
+ * `qualified` is optional: pass it (Campaign Analytics) to show the attempted/qualified/rejected
+ * eligibility summary above the breakdown.
  */
 export function QualificationBreakdown({ buckets, qualified }: { buckets: QualificationBucket[]; qualified?: number }) {
   const rejected = buckets.reduce((s, b) => s + b.count, 0)
@@ -64,7 +68,17 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
           return (
             <div key={bucket.reason} className="border-t border-border py-4 first:border-t-0 first:pt-0">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-base font-semibold text-foreground">{bucket.reason}</span>
+                <span className="flex items-center gap-1.5 text-base font-semibold text-foreground">
+                  {bucket.reason}
+                  {meaning && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="size-3.5 shrink-0 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>{meaning}</TooltipContent>
+                    </Tooltip>
+                  )}
+                </span>
                 <span className="shrink-0 whitespace-nowrap">
                   <span className="text-base font-semibold tabular-nums text-foreground">{formatNumber(bucket.count)}</span>
                   <span className="ml-1 text-sm text-muted-foreground">· {pct}%</span>
@@ -73,15 +87,9 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }} />
               </div>
-              {(meaning || tip) && (
+              {tip && (
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  {meaning}
-                  {tip && (
-                    <>
-                      {" "}
-                      <span className="font-medium text-foreground">Tip:</span> {tip}
-                    </>
-                  )}
+                  <span className="font-medium text-foreground">Tip:</span> {tip}
                 </p>
               )}
             </div>

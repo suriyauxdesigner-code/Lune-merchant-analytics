@@ -1,4 +1,3 @@
-import { Info } from "lucide-react"
 import { formatNumber } from "@/lib/utils"
 import type { QualificationBucket, QualificationReason } from "@/lib/mock-performance"
 
@@ -57,28 +56,32 @@ export function QualificationBreakdown({ buckets, qualified }: { buckets: Qualif
           </div>
         </div>
       )}
-      <div className="space-y-5">
+      <div>
         {sortedBuckets.map((bucket, i) => {
           const pct = Math.round((bucket.count / total) * 100)
           const meaning = MEANING[bucket.reason]
           const tip = TIP[bucket.reason]
           return (
-            <div key={bucket.reason}>
-              <div className="mb-2 flex items-baseline justify-between gap-3">
+            <div key={bucket.reason} className="border-t border-border py-4 first:border-t-0 first:pt-0">
+              <div className="flex items-baseline justify-between gap-3">
                 <span className="text-base font-semibold text-foreground">{bucket.reason}</span>
                 <span className="shrink-0 whitespace-nowrap">
                   <span className="text-base font-semibold tabular-nums text-foreground">{formatNumber(bucket.count)}</span>
                   <span className="ml-1 text-sm text-muted-foreground">· {pct}%</span>
                 </span>
               </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }} />
               </div>
-              {meaning && <p className="mt-2 text-xs text-muted-foreground">{meaning}</p>}
-              {tip && (
-                <p className="mt-1 flex items-start gap-1 text-xs font-medium text-foreground">
-                  <Info className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                  Tip: {tip}
+              {(meaning || tip) && (
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {meaning}
+                  {tip && (
+                    <>
+                      {" "}
+                      <span className="font-medium text-foreground">Tip:</span> {tip}
+                    </>
+                  )}
                 </p>
               )}
             </div>

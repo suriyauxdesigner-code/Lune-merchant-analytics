@@ -65,6 +65,9 @@ export default function CampaignAnalytics() {
   const transactionRows = React.useMemo(() => (campaign ? generateTransactionRows([campaign]) : []), [campaign])
   const weekday = React.useMemo(() => (perf ? bucketByDayOfWeek(perf.dailySeries) : []), [perf])
   const heatmap = React.useMemo(() => (perf ? buildDayTimeHeatmap(perf.dailySeries) : []), [perf])
+  // Same transactions-to-customers ratio already used for per-location estimates — applied here so
+  // the heatmap's hover tooltip can show an estimated customer count per cell.
+  const heatmapCustomerRatio = perf && perf.transactions > 0 ? perf.customersTransacted / perf.transactions : 0
   const amountStats = React.useMemo(() => computeAmountStats(transactionRows), [transactionRows])
   const amountDistribution = React.useMemo(() => computeAmountDistribution(transactionRows), [transactionRows])
   const offerEconomics = React.useMemo(() => (campaign ? computeOfferEconomics(transactionRows, campaign) : null), [transactionRows, campaign])
@@ -119,7 +122,7 @@ export default function CampaignAnalytics() {
     <div>
       {/* Header */}
       <PageHeader
-        breadcrumb={[{ label: "Analytics", to: `/analytics/brands/${brand.id}` }, { label: brand.name, to: `/analytics/brands/${brand.id}` }, { label: campaign.name }]}
+        breadcrumb={[{ label: "Analytics", to: `/analytics/brands/${brand.id}` }, { label: campaign.name }]}
         title={
           <>
             {campaign.name}
@@ -237,7 +240,7 @@ export default function CampaignAnalytics() {
 
         <div className="mt-6">
           <SectionCard title="Day / Time Performance" description="GMV by day of week and time of day">
-            <HeatmapGrid cells={heatmap} />
+            <HeatmapGrid cells={heatmap} customerRatio={heatmapCustomerRatio} />
           </SectionCard>
         </div>
       </section>

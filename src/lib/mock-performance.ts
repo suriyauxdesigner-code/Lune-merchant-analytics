@@ -601,7 +601,7 @@ export function bucketByDayOfWeek(daily: DailyPoint[]): WeekdayPoint[] {
 
 // --- day + time heatmap --------------------------------------------------
 
-export type HeatCell = { day: string; shortDay: string; block: string; value: number }
+export type HeatCell = { day: string; shortDay: string; block: string; value: number; transactions: number; cashback: number }
 
 /** A typical UAE retail traffic curve — evening-weighted — applied to each day's real total to split it into time blocks. Not measured hourly data (Pulse doesn't have it); a deterministic, clearly-modeled shape. */
 const TIME_BLOCKS: { label: string; weight: number }[] = [
@@ -613,7 +613,7 @@ const TIME_BLOCKS: { label: string; weight: number }[] = [
   { label: "9pm–12am", weight: 0.8 },
 ]
 
-/** Splits each weekday's real GMV total into time-of-day blocks using a modeled retail traffic shape. */
+/** Splits each weekday's real GMV, transactions and cashback into time-of-day blocks using the same modeled retail traffic shape — one jitter per cell applied to all three, so a cell's own AOV and cashback rate stay internally consistent with its day's totals. */
 export function buildDayTimeHeatmap(daily: DailyPoint[]): HeatCell[] {
   const dayTotals = bucketByDayOfWeek(daily)
   const weightSum = TIME_BLOCKS.reduce((s, b) => s + b.weight, 0)
@@ -621,7 +621,15 @@ export function buildDayTimeHeatmap(daily: DailyPoint[]): HeatCell[] {
   for (const day of dayTotals) {
     for (const block of TIME_BLOCKS) {
       const jitter = seeded(`${day.day}-${block.label}`, 70, 0.85, 1.15)
-      cells.push({ day: day.day, shortDay: day.shortDay, block: block.label, value: day.transactionValue * (block.weight / weightSum) * jitter })
+      const share = (block.weight / weightSum) * jitter
+      cells.push({
+        day: day.day,
+        shortDay: day.shortDay,
+        block: block.label,
+        value: day.transactionValue * share,
+        transactions: Math.round(day.transactions * share),
+        cashback: day.cashbackIssued * share,
+      })
     }
   }
   return cells

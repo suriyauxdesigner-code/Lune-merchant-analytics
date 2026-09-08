@@ -3,24 +3,26 @@ import { cn } from "@/lib/utils"
 
 export type DonutSegment = { label: string; value: number; color: string }
 
-/** A donut chart with a legend and an optional big center label — for composition ("how is X split") questions. */
+/** A donut chart with a legend and an optional big center label — for composition ("how is X split") questions. Set `hideLegend` when the caller wants to render its own (e.g. a compact legend below the ring instead of a list beside it). */
 export function DonutChart({
   segments,
   formatValue,
   centerLabel,
   centerValue,
   size = 180,
+  hideLegend = false,
 }: {
   segments: DonutSegment[]
   formatValue: (v: number) => string
   centerLabel?: string
   centerValue?: string
   size?: number
+  hideLegend?: boolean
 }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0)
 
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+    <div className={cn("flex flex-col items-center gap-5", !hideLegend && "sm:flex-row sm:items-center")}>
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -43,23 +45,25 @@ export function DonutChart({
         )}
       </div>
 
-      <div className="w-full min-w-0 space-y-2.5">
-        {segments.map((seg) => {
-          const pct = total > 0 ? (seg.value / total) * 100 : 0
-          return (
-            <div key={seg.label} className="flex items-center justify-between gap-3 text-sm">
-              <span className="flex min-w-0 items-center gap-2">
-                <span className={cn("size-2.5 shrink-0 rounded-full")} style={{ backgroundColor: seg.color }} />
-                <span className="truncate text-foreground">{seg.label}</span>
-              </span>
-              <span className="shrink-0 whitespace-nowrap">
-                <span className="font-semibold tabular-nums text-foreground">{formatValue(seg.value)}</span>
-                <span className="ml-1 text-muted-foreground">· {Math.round(pct)}%</span>
-              </span>
-            </div>
-          )
-        })}
-      </div>
+      {!hideLegend && (
+        <div className="w-full min-w-0 space-y-2.5">
+          {segments.map((seg) => {
+            const pct = total > 0 ? (seg.value / total) * 100 : 0
+            return (
+              <div key={seg.label} className="flex items-center justify-between gap-3 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className={cn("size-2.5 shrink-0 rounded-full")} style={{ backgroundColor: seg.color }} />
+                  <span className="truncate text-foreground">{seg.label}</span>
+                </span>
+                <span className="shrink-0 whitespace-nowrap">
+                  <span className="font-semibold tabular-nums text-foreground">{formatValue(seg.value)}</span>
+                  <span className="ml-1 text-muted-foreground">· {Math.round(pct)}%</span>
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

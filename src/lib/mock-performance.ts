@@ -635,27 +635,14 @@ export function buildDayTimeHeatmap(daily: DailyPoint[]): HeatCell[] {
   return cells
 }
 
-// --- customer demographics -------------------------------------------------
+// --- customer purchase behavior ---------------------------------------------
 //
-// Pulse doesn't capture customer identity or demographics today. Everything
-// below is a deterministic model seeded from each campaign's own id + a
-// synthetic per-customer index — internally consistent (a brand's totals
-// always foot to the sum of its campaigns) but explicitly a prototype
-// estimate, not measured data.
+// Pulse doesn't capture customer identity today. Everything below is a
+// deterministic model seeded from each campaign's own id + a synthetic
+// per-customer index — internally consistent (a brand's totals always foot
+// to the sum of its campaigns) but explicitly a prototype estimate, not
+// measured data.
 // ---------------------------------------------------------------------------
-
-export type AgeBand = "18-24" | "25-34" | "35-44" | "45-54" | "55+"
-export type Gender = "Female" | "Male"
-
-const AGE_BAND_WEIGHTS: [AgeBand, number][] = [
-  ["18-24", 0.15],
-  ["25-34", 0.32],
-  ["35-44", 0.28],
-  ["45-54", 0.16],
-  ["55+", 0.09],
-]
-
-export const AGE_BANDS: AgeBand[] = AGE_BAND_WEIGHTS.map(([band]) => band)
 
 /** Splits `total` purchases across `customers` people so counts sum exactly to `total` — most customers buy once, a smaller share buys repeatedly. */
 function distributePurchases(seedId: string, total: number, customers: number): number[] {
@@ -684,62 +671,9 @@ export function getPurchaseDistribution(campaign: Campaign): number[] {
   return dist
 }
 
-function customerProfile(customerId: string): { ageBand: AgeBand; gender: Gender } {
-  const roll = hash(customerId, 50)
-  let cursor = 0
-  let ageBand: AgeBand = AGE_BAND_WEIGHTS[AGE_BAND_WEIGHTS.length - 1][0]
-  for (const [band, weight] of AGE_BAND_WEIGHTS) {
-    cursor += weight
-    if (roll < cursor) {
-      ageBand = band
-      break
-    }
-  }
-  const gender: Gender = seeded(customerId, 51, 0, 1) < 0.58 ? "Female" : "Male"
-  return { ageBand, gender }
-}
-
 /** A modeled per-customer lifetime value for this campaign — purchase count × AOV × a seeded spread, since Pulse doesn't track per-customer spend. */
 function customerValue(customerId: string, purchases: number, avgTransactionValue: number): number {
   return purchases * avgTransactionValue * seeded(customerId, 52, 0.7, 1.35)
-}
-
-export type AgeBucket = { ageBand: AgeBand; customers: number; gmv: number; transactions: number }
-export type GenderBucket = { gender: Gender; customers: number; gmv: number; transactions: number }
-export type CustomerDemographics = { byAge: AgeBucket[]; byGender: GenderBucket[]; totalCustomers: number; totalGmv: number }
-
-/** Age/gender breakdown for a set of campaigns — sums per-campaign demographics so a brand's totals foot to the sum of its campaigns. */
-export function aggregateDemographics(campaigns: Campaign[]): CustomerDemographics {
-  const byAge = new Map<AgeBand, AgeBucket>(AGE_BANDS.map((b) => [b, { ageBand: b, customers: 0, gmv: 0, transactions: 0 }]))
-  const byGender = new Map<Gender, GenderBucket>([
-    ["Female", { gender: "Female", customers: 0, gmv: 0, transactions: 0 }],
-    ["Male", { gender: "Male", customers: 0, gmv: 0, transactions: 0 }],
-  ])
-  let totalCustomers = 0
-  let totalGmv = 0
-
-  for (const campaign of campaigns) {
-    const perf = getCampaignPerformance(campaign)
-    if (!perf.hasStarted) continue
-    const dist = getPurchaseDistribution(campaign)
-    dist.forEach((purchases, i) => {
-      const customerId = `${campaign.id}-cust-${i}`
-      const { ageBand, gender } = customerProfile(customerId)
-      const value = customerValue(customerId, purchases, perf.avgTransactionValue)
-      const ageBucket = byAge.get(ageBand)!
-      ageBucket.customers += 1
-      ageBucket.gmv += value
-      ageBucket.transactions += purchases
-      const genderBucket = byGender.get(gender)!
-      genderBucket.customers += 1
-      genderBucket.gmv += value
-      genderBucket.transactions += purchases
-      totalCustomers += 1
-      totalGmv += value
-    })
-  }
-
-  return { byAge: [...byAge.values()], byGender: [...byGender.values()], totalCustomers, totalGmv }
 }
 
 export type FrequencyBucket = { label: string; customers: number }
@@ -836,8 +770,6 @@ export type TransactionRow = {
   customerId: string
   /** Masked customer reference for display in transaction logs — not a real identifier. */
   customerRef: string
-  ageBand: AgeBand
-  gender: Gender
 }
 
 function seededShuffle<T>(arr: T[], seedId: string): T[] {
@@ -903,7 +835,6 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
 
         const customerId = customerSequence[customerCursor] ?? `${campaign.id}-cust-${customerCursor}`
         customerCursor++
-        const { ageBand, gender } = customerProfile(customerId)
         const customerRef = `CUST-${(hash(customerId, 34) * 8999 + 1000).toFixed(0)}`
 
         rows.push({
@@ -920,8 +851,6 @@ export function generateTransactionRows(campaigns: Campaign[]): TransactionRow[]
           status,
           customerId,
           customerRef,
-          ageBand,
-          gender,
         })
       }
     }

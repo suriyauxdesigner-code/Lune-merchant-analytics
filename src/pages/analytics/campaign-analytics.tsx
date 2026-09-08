@@ -18,23 +18,13 @@ import { PurchaseBehaviourPanel } from "@/components/analytics/purchase-behaviou
 import { HeatmapGrid } from "@/components/analytics/heatmap-grid"
 import { LocationQualificationList } from "@/components/analytics/location-qualification-list"
 import { TerminalPerformancePanel } from "@/components/analytics/terminal-performance-panel"
-import { CustomerDemographicsPanel } from "@/components/analytics/customer-demographics-panel"
-import { DemographicPerformancePanel } from "@/components/analytics/demographic-performance-panel"
 import { NewReturningPanel } from "@/components/analytics/new-returning-panel"
 import { KeyInsights } from "@/components/analytics/key-insights"
 import { TransactionSection } from "@/components/analytics/transaction-section"
 import { campaignById, brandById } from "@/lib/data"
-import { cn, formatAed, formatDate, formatNumber, formatRatio } from "@/lib/utils"
+import { formatAed, formatDate, formatNumber, formatRatio } from "@/lib/utils"
 import { durationLabel } from "@/lib/analytics-utils"
-import {
-  getCampaignPerformance,
-  bucketSeries,
-  bucketByDayOfWeek,
-  buildDayTimeHeatmap,
-  generateTransactionRows,
-  aggregateDemographics,
-  getNewReturningStats,
-} from "@/lib/mock-performance"
+import { getCampaignPerformance, bucketSeries, bucketByDayOfWeek, buildDayTimeHeatmap, generateTransactionRows, getNewReturningStats } from "@/lib/mock-performance"
 import { computeAmountStats, computeAmountDistribution, computeOfferEconomics, computeMidStats, computeTerminalStats, computeChannelBehavior } from "@/lib/transaction-stats"
 import { generateCampaignInsights } from "@/lib/insights"
 
@@ -74,7 +64,6 @@ export default function CampaignAnalytics() {
   const midStats = React.useMemo(() => (campaign ? computeMidStats(transactionRows, campaign.brandId) : []), [transactionRows, campaign])
   const terminalStats = React.useMemo(() => computeTerminalStats(transactionRows), [transactionRows])
   const channelStats = React.useMemo(() => computeChannelBehavior(transactionRows), [transactionRows])
-  const demographics = React.useMemo(() => (campaign ? aggregateDemographics([campaign]) : null), [campaign])
   const newReturningStats = React.useMemo(() => (campaign ? getNewReturningStats([campaign]) : []), [campaign])
 
   const channelMix = React.useMemo(() => {
@@ -92,13 +81,6 @@ export default function CampaignAnalytics() {
     return total > 0 ? { mid: midStats[0].mid, gmvSharePct: (midStats[0].gmv / total) * 100 } : null
   }, [midStats])
 
-  const topAgeSegment = React.useMemo(() => {
-    if (!demographics) return null
-    const total = demographics.totalGmv
-    const top = [...demographics.byAge].filter((b) => b.customers > 0).sort((a, b) => b.gmv - a.gmv)[0]
-    return top && total > 0 ? { ageBand: top.ageBand, gmvSharePct: (top.gmv / total) * 100 } : null
-  }, [demographics])
-
   const insights = React.useMemo(() => {
     if (!perf) return []
     return generateCampaignInsights({
@@ -110,9 +92,8 @@ export default function CampaignAnalytics() {
       estimatedExhaustionDate: perf.estimatedExhaustionDate,
       weekday,
       topMid,
-      topAgeSegment,
     })
-  }, [perf, channelMix, weekday, topMid, topAgeSegment])
+  }, [perf, channelMix, weekday, topMid])
 
   if (!campaign || !brand || !perf) {
     return <EmptyState icon={<MegaphoneIcon className="size-6" />} title="Campaign not found" description="This campaign doesn't exist in the sample dataset." />
@@ -252,39 +233,12 @@ export default function CampaignAnalytics() {
           <p className="mt-1 text-sm text-muted-foreground">Who responded to this campaign — scoped to this campaign alone, not the whole brand</p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {demographics && (
-            <SectionCard
-              title="Campaign Customer Demographics"
-              description="Age and gender breakdown of customers who responded"
-              className="flex h-full flex-col"
-              contentClassName="flex-1 min-h-0"
-            >
-              <CustomerDemographicsPanel demographics={demographics} />
-            </SectionCard>
-          )}
-          <SectionCard
-            title="New vs. Returning"
-            description="Acquisition vs. retention for this campaign"
-            className={cn("flex h-full flex-col", !demographics && "lg:col-span-2")}
-            contentClassName="flex-1 min-h-0"
-          >
-            <NewReturningPanel stats={newReturningStats} />
-          </SectionCard>
-        </div>
+        <SectionCard title="New vs. Returning" description="Acquisition vs. retention for this campaign">
+          <NewReturningPanel stats={newReturningStats} />
+        </SectionCard>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          {demographics && (
-            <SectionCard title="Demographic Performance" description="Which age segment performs best" className="flex h-full flex-col" contentClassName="flex-1 min-h-0">
-              <DemographicPerformancePanel buckets={demographics.byAge} />
-            </SectionCard>
-          )}
-          <SectionCard
-            title="Purchase Behaviour"
-            description="How much customers are spending per transaction"
-            className={cn("flex h-full flex-col", !demographics && "lg:col-span-2")}
-            contentClassName="flex-1 min-h-0"
-          >
+        <div className="mt-6">
+          <SectionCard title="Purchase Behaviour" description="How much customers are spending per transaction">
             <PurchaseBehaviourPanel stats={amountStats} distribution={amountDistribution} />
           </SectionCard>
         </div>

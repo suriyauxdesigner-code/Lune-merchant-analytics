@@ -12,7 +12,6 @@ import { FilterBar } from "@/components/analytics/filter-bar"
 import { PerformanceOverTimeChart, type ChartMetric } from "@/components/analytics/performance-over-time-chart"
 import { PillToggle } from "@/components/analytics/pill-toggle"
 import { CampaignPerformanceTable, type CampaignPerformanceRow } from "@/components/analytics/campaign-performance-table"
-import { CustomerDemographicsPanel } from "@/components/analytics/customer-demographics-panel"
 import { CustomerValuePanel } from "@/components/analytics/customer-value-panel"
 import { NewReturningPanel } from "@/components/analytics/new-returning-panel"
 import { PurchaseFrequencyPanel } from "@/components/analytics/purchase-frequency-panel"
@@ -31,7 +30,6 @@ import {
   percentChange,
   generateTransactionRows,
   getCampaignPerformance,
-  aggregateDemographics,
   getCustomerValueDistribution,
   getNewReturningStats,
   getPurchaseFrequency,
@@ -81,7 +79,6 @@ export default function BrandAnalytics() {
   const locationStats = React.useMemo(() => computeLocationStats(transactionRows, customerRatio, brandId), [transactionRows, customerRatio, brandId])
   const channelStats = React.useMemo(() => computeChannelBehavior(transactionRows), [transactionRows])
 
-  const demographics = React.useMemo(() => aggregateDemographics(filteredCampaigns), [filteredCampaigns])
   const valueBuckets = React.useMemo(() => getCustomerValueDistribution(filteredCampaigns), [filteredCampaigns])
   const newReturningStats = React.useMemo(() => getNewReturningStats(filteredCampaigns), [filteredCampaigns])
   const freqBuckets = React.useMemo(() => getPurchaseFrequency(filteredCampaigns), [filteredCampaigns])
@@ -261,18 +258,11 @@ export default function BrandAnalytics() {
               />
             </KpiGrid>
 
+            <SectionCard title="New vs. Returning Customers" description="Acquisition vs. retention, and how each segment's value compares">
+              <NewReturningPanel stats={newReturningStats} />
+            </SectionCard>
+
             <div className="mt-6 grid items-stretch gap-6 lg:grid-cols-2">
-              <SectionCard title="Customer Demographics" description="Age and gender breakdown of customers reached" className="flex h-full flex-col" contentClassName="flex-1 min-h-0">
-                <CustomerDemographicsPanel demographics={demographics} />
-              </SectionCard>
-              <SectionCard
-                title="New vs. Returning Customers"
-                description="Acquisition vs. retention, and how each segment's value compares"
-                className="flex h-full flex-col"
-                contentClassName="flex-1 min-h-0"
-              >
-                <NewReturningPanel stats={newReturningStats} />
-              </SectionCard>
               <SectionCard title="Customer Value" description="How much customers spend, in total, across all campaigns" className="flex h-full flex-col" contentClassName="flex-1 min-h-0">
                 <CustomerValuePanel buckets={valueBuckets} />
               </SectionCard>

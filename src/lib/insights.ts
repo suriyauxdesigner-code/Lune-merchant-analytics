@@ -25,7 +25,6 @@ export function generateCampaignInsights(input: {
   estimatedExhaustionDate: string | null
   weekday: WeekdayPoint[]
   topMid: { mid: string; gmvSharePct: number } | null
-  topAgeSegment: { ageBand: string; gmvSharePct: number } | null
 }): Insight[] {
   const insights: Insight[] = []
 
@@ -83,15 +82,6 @@ export function generateCampaignInsights(input: {
       tone: "neutral",
       title: `${leader} contributes ${formatPercent(pct, 0)} of campaign GMV`,
       description: `The offer is performing best through the ${leader.toLowerCase()} channel — worth reflecting in how it's promoted.`,
-    })
-  }
-
-  if (input.topAgeSegment && input.topAgeSegment.gmvSharePct >= 20) {
-    insights.push({
-      id: "top-segment",
-      tone: "neutral",
-      title: `${input.topAgeSegment.ageBand} is the highest-value customer segment`,
-      description: `This age group contributes ${formatPercent(input.topAgeSegment.gmvSharePct, 0)} of campaign GMV — worth tailoring creative or offers toward it.`,
     })
   }
 

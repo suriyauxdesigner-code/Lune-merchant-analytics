@@ -15,10 +15,9 @@ const MIN_BAND_PCT = 5
 const BAND_HEIGHT = 88
 
 /**
- * A bottom-flush tapering funnel — each column shows the stage's raw count and its conversion
- * from the previous stage, sitting above a solid-colored bar (one color per stage) whose height
- * represents its share of "Offer Shown". Bars connect edge-to-edge with a sloped top, like a
- * classic multi-stage conversion funnel.
+ * A vertical bar chart funnel — each column shows the stage's raw count and its conversion from
+ * the previous stage, sitting above its own bottom-aligned bar (one color per stage) whose height
+ * represents its share of "Offer Shown".
  */
 export function EngagementFunnel({ perf }: { perf: Perf }) {
   const values = FUNNEL_KEYS.map((k) => perf[k])
@@ -59,16 +58,11 @@ export function EngagementFunnel({ perf }: { perf: Perf }) {
             })}
           </div>
 
-          {/* Connecting bars — solid per-stage colors, bottom-flush, tapering to the next stage's share */}
-          <div className="mt-3 grid gap-0" style={{ ...gridCols, height: BAND_HEIGHT }}>
-            {FUNNEL_STAGES.map((stage, i) => {
-              const leftPct = heights[i]
-              const rightPct = i < n - 1 ? heights[i + 1] : leftPct
-              const top1 = 100 - leftPct
-              const top2 = 100 - rightPct
-
-              return <div key={stage.key} style={{ clipPath: `polygon(0% ${top1}%, 100% ${top2}%, 100% 100%, 0% 100%)`, backgroundColor: STAGE_COLORS[i % STAGE_COLORS.length] }} />
-            })}
+          {/* One independent bar per stage, bottom-aligned, height proportional to its share of "Offer Shown" */}
+          <div className="mt-3 grid items-end gap-3" style={{ ...gridCols, height: BAND_HEIGHT }}>
+            {FUNNEL_STAGES.map((stage, i) => (
+              <div key={stage.key} className="rounded-t-md transition-all" style={{ height: `${heights[i]}%`, backgroundColor: STAGE_COLORS[i % STAGE_COLORS.length] }} />
+            ))}
           </div>
         </div>
       </div>

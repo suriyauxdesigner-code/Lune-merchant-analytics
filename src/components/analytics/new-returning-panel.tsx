@@ -34,7 +34,7 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
             formatValue={formatNumber}
             centerLabel="Customers"
             centerValue={formatNumber(totalCustomers)}
-            size={200}
+            size={260}
             hideLegend
           />
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">

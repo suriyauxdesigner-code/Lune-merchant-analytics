@@ -27,14 +27,18 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
         </div>
       )}
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[auto_1fr] lg:items-start">
+      {/* Side-by-side waits for `xl` (1280px), not the more typical `lg` (1024px): at 1024px this
+          app's sidebar leaves each detail card only ~70px per metric column once the donut has
+          taken its share — nowhere near enough for a 4-across metric row. Below xl, everything
+          stacks and each card gets the full content width, which fits the 4 columns comfortably. */}
+      <div className="mt-6 grid gap-8 xl:grid-cols-[auto_1fr] xl:items-start">
         <div className="flex flex-col items-center">
           <DonutChart
             segments={stats.map((s) => ({ label: s.segment, value: s.customers, color: SEGMENT_COLORS[s.segment] }))}
             formatValue={formatNumber}
             centerLabel="Customers"
             centerValue={formatNumber(totalCustomers)}
-            size={260}
+            size={300}
             hideLegend
           />
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
@@ -63,26 +67,22 @@ export function NewReturningPanel({ stats }: { stats: NewReturningStat[] }) {
                   <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: SEGMENT_COLORS[s.segment] }} />
                   {s.segment} Customers
                 </div>
-                <div className="mt-4 grid grid-cols-2 divide-x divide-border">
-                  <div className="space-y-4 pr-6">
-                    <div>
-                      <p className="text-sm text-muted-foreground">GMV</p>
-                      <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{formatAed(s.gmv)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Transactions</p>
-                      <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{formatNumber(s.transactions)}</p>
-                    </div>
+                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">GMV</p>
+                    <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{formatAed(s.gmv)}</p>
                   </div>
-                  <div className="space-y-4 pl-6">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Avg. spend</p>
-                      <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{formatAed(avgSpend)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Purchases / customer</p>
-                      <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{avgTx.toFixed(1)}</p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Transactions</p>
+                    <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{formatNumber(s.transactions)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Avg. spend</p>
+                    <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{formatAed(avgSpend)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Purchases / customer</p>
+                    <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{avgTx.toFixed(1)}</p>
                   </div>
                 </div>
               </div>
